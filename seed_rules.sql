@@ -59,4 +59,54 @@ INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
     ('%CLARY ANDERSON%',        NULL, 'Hockey',                100),
     ('%PUREHOCKEY%',            NULL, 'Hockey',                100),
     ('%LIVEBARN%',              NULL, 'Hockey',                100)
-ON CONFLICT (pattern, min_spent) DO NOTHING;
+ON CONFLICT (pattern, min_spent) DO UPDATE
+    SET subcategory = EXCLUDED.subcategory,
+        priority    = EXCLUDED.priority;
+
+INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
+    -- Income & money movement
+    ('%H&R BLOCK%',             NULL, 'Other Income',          100),  -- tax refund deposit
+    ('%ATM CHECK DEPOSIT%',     NULL, 'Other Income',          100),
+    ('%ATM WITHDRAWAL%',        NULL, 'Cash Withdrawal',       100),
+    ('%FID BKG SVC%',           NULL, 'Savings & Investing',   100),  -- Fidelity, both directions
+    ('%CAPITAL ONE%PMT%',       NULL, 'Credit Card Payment',   100),
+    ('%AFFIRM%',                NULL, 'Hockey',                100),  -- ?
+    ('%RUTGERS%INVOICE%',       NULL, 'Tuition & Fees',        100),  -- refund
+
+    -- Shopping
+    ('%MACY%',                  NULL, 'Clothing',              100),
+    ('%EXPRESS #%',             NULL, 'Clothing',              100),
+    ('%BANANAREPUBLIC%',        NULL, 'Clothing',              100),
+    ('%BEST BUY%',              NULL, 'Electronics & Tech',    100),
+    ('%MICRO ELECTRONIC%',      NULL, 'Electronics & Tech',    100),  -- Micro Center
+    ('%DICKS SPORTING%',        NULL, 'General Shopping',      100),
+
+    -- Hockey
+    ('%PURE HOCKEY%',           NULL, 'Hockey',                100),  -- the spaced version
+    ('%PRO STOCK STICKS%',      NULL, 'Hockey',                100),
+
+    -- Travel
+    ('%EXPEDIA%',               NULL, 'Flights & Lodging',     100),  -- ?
+    ('%RESIDENCE INN%',         NULL, 'Flights & Lodging',     100),  -- ?
+
+    -- Restaurants & bars
+    ('%DEAR MAUD%',             NULL, 'Restaurants',           100),
+    ('%KINYA%',                 NULL, 'Restaurants',           100),
+    ('%YARD HOUSE%',            NULL, 'Restaurants',           100),
+    ('%MCLOONES%',              NULL, 'Restaurants',           100),
+    ('%JALAPENO MEXICAN%',      NULL, 'Restaurants',           100),
+    ('%SQ *BROOKDALE%',         NULL, 'Restaurants',           100),  -- The Brookdale (closed)
+
+    -- Health
+    ('%ADVANCED SMILES%',       NULL, 'Medical & Pharmacy',    100),  -- dentist
+
+    -- Gas
+    ('%FUEL 4%',                NULL, 'Gas',                   100),  -- Wayne + Verona
+
+    -- Entertainment
+    ('%WELLMONT THEATER%',      NULL, 'Events & Hobbies',      100),
+    ('%FANDUEL%',               NULL, 'Events & Hobbies',      100),  -- ?
+    ('%HINGE%',                 NULL, 'Subscriptions',         100)
+ON CONFLICT (pattern, min_spent) DO UPDATE
+    SET subcategory = EXCLUDED.subcategory,
+        priority    = EXCLUDED.priority;

@@ -64,3 +64,29 @@ CREATE TABLE IF NOT EXISTS category_rules (
     priority        integer NOT NULL DEFAULT 100,
     UNIQUE NULLS NOT DISTINCT (pattern, min_spent)
 );
+
+CREATE OR REPLACE VIEW transactions_categorized AS
+SELECT
+    t.id,
+    coalesce(t.transaction_date, t.posted_date)  AS date,
+    a.nickname                                    AS account,
+    t.description,
+    t.amount,
+    c.category,
+    c.subcategory,
+    c.is_spending,
+    c.tax_relevant,
+    CASE WHEN best_rule.subcategory IS NOT NULL THEN 'rule' END AS category_source,
+    t.row_hash
+FROM transactions t
+JOIN accounts a ON a.id = t.account_id
+LEFT JOIN LATERAL (
+    SELECT r.subcategory
+    FROM category_rules r
+    WHERE t.description ILIKE r.pattern
+      AND (r.min_spent IS NULL OR -t.amount >= r.min_spent)
+    ORDER BY r.priority, r.id
+    LIMIT 1
+) best_rule ON true
+JOIN categories c
+  ON c.subcategory = coalesce(best_rule.subcategory, 'Uncategorized');
