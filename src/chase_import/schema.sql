@@ -47,3 +47,11 @@ SELECT
     t.source_file
 FROM transactions t
 JOIN accounts a ON a.id = t.account_id;
+
+
+CREATE TABLE IF NOT EXISTS categories (
+    subcategory     text PRIMARY KEY,
+    category        text NOT NULL,
+    tax_relevant    boolean NOT NULL DEFAULT false,
+    is_spending     boolean NOT NULL DEFAULT true
+);
