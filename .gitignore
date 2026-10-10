@@ -1,0 +1,17 @@
+# Never commit real bank data or passwords
+.env
+data/
+*.csv
+*.CSV
+*.xlsx
+*.xls
+*.parquet
+!tests/sample_data/*
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.idea/

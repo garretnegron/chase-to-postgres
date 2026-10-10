@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chase-to-postgres"
+version = "0.1.0"
+description = "Load Chase checking and credit card exports (CSV, Excel, Parquet) into Postgres"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "psycopg[binary]>=3.1",
+    "python-dotenv>=1.0",
+    "openpyxl>=3.1",
+    "pyarrow>=14",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+chase-import = "chase_import.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+chase_import = ["schema.sql"]
