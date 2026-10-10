@@ -55,3 +55,10 @@ CREATE TABLE IF NOT EXISTS categories (
     tax_relevant    boolean NOT NULL DEFAULT false,
     is_spending     boolean NOT NULL DEFAULT true
 );
+
+CREATE TABLE IF NOT EXISTS category_rules (
+    id              serial PRIMARY KEY,
+    pattern         text NOT NULL UNIQUE,
+    subcategory     text NOT NULL REFERENCES categories (subcategory) ON UPDATE CASCADE,
+    priority        integer NOT NULL DEFAULT 100
+);
