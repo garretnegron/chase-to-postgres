@@ -67,7 +67,6 @@ INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
     -- Income & money movement
     ('%H&R BLOCK%',             NULL, 'Other Income',          100),  -- tax refund deposit
     ('%ATM CHECK DEPOSIT%',     NULL, 'Other Income',          100),
-    ('%ATM WITHDRAWAL%',        NULL, 'Cash Withdrawal',       100),
     ('%FID BKG SVC%',           NULL, 'Savings & Investing',   100),  -- Fidelity, both directions
     ('%CAPITAL ONE%PMT%',       NULL, 'Credit Card Payment',   100),
     ('%AFFIRM%',                NULL, 'Hockey',                100),  -- ?
@@ -107,6 +106,60 @@ INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
     ('%WELLMONT THEATER%',      NULL, 'Events & Hobbies',      100),
     ('%FANDUEL%',               NULL, 'Events & Hobbies',      100),  -- ?
     ('%HINGE%',                 NULL, 'Subscriptions',         100)
+ON CONFLICT (pattern, min_spent) DO UPDATE
+    SET subcategory = EXCLUDED.subcategory,
+        priority    = EXCLUDED.priority;
+
+
+INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
+    -- Fixes for holes in earlier rules
+    ('%KRAUZERS%',              NULL, 'Convenience & Coffee',  100),  -- no-S spelling
+    ('%ATM WITHDRAW%',          NULL, 'Cash Withdrawal',       100),  -- catches the cut-off version
+    ('%BR FACTORY%',            NULL, 'Clothing',              100),  -- Banana Republic Factory
+
+    -- Keyword rules: broad, so priority 200 (specific rules win)
+    ('%DINER%',                 NULL, 'Restaurants',           200),
+    ('%TAVERN%',                NULL, 'Restaurants',           200),
+    ('%SUSHI%',                 NULL, 'Restaurants',           200),
+
+    -- Restaurants & bars
+    ('%CHEESECAKE%',            NULL, 'Restaurants',           100),
+    ('%NAMI NORI%',             NULL, 'Restaurants',           100),
+    ('%BAR ANTICIPATION%',      NULL, 'Restaurants',           100),
+    ('%GRAIN HOUSE%',           NULL, 'Restaurants',           100),
+    ('%JENKINSONS%',            NULL, 'Restaurants',           100),
+    ('%BOARDWALK BAR%',         NULL, 'Restaurants',           100),
+    ('%DOWN THE HATCH%',        NULL, 'Restaurants',           100),
+    ('%HAIKU%',                 NULL, 'Restaurants',           100),
+    ('%CUCINA CALANDRA%',       NULL, 'Restaurants',           100),
+    ('%BAO DUMPLINGS%',         NULL, 'Restaurants',           100),
+    ('%P.F.CHANG%',             NULL, 'Restaurants',           100),
+    ('%FIREFORGE%',             NULL, 'Restaurants',           100),
+
+    -- Fast food
+    ('%TACO BELL%',             NULL, 'Fast Food & Takeout',   100),
+    ('%STACI''S SANDWICH%',     NULL, 'Fast Food & Takeout',   100),
+
+    -- Gas & parking
+    ('%SUNOCO%',                NULL, 'Gas',                   100),
+    ('%VERONA DELTA%',          NULL, 'Gas',                   100),  -- not just %DELTA%: that's an airline
+    ('%RIVER STREET GARAGE%',   NULL, 'Tolls & Parking',       100),
+
+    -- Hockey & events
+    ('%MONTCLAIR STATE ICE%',   NULL, 'Hockey',                100),
+    ('%TICKETMASTER%',          NULL, 'Events & Hobbies',      100),
+    ('%PRUDENTIALCENTER%',      NULL, 'Events & Hobbies',      100),  -- Devils games
+    ('%MSG CONCESSIONS%',       NULL, 'Events & Hobbies',      100),
+
+    -- Clothing
+    ('%SUITSHOP%',              NULL, 'Clothing',              100),
+    ('%SOUTHERN TIDE%',         NULL, 'Clothing',              100),
+    ('%DSW%',                   NULL, 'Clothing',              100),
+    ('%TEEPUBLIC%',             NULL, 'Clothing',              100),
+
+    -- Personal & health
+    ('%LAUNDROMAT%',            NULL, 'Personal Care',         100),
+    ('%VITAMIN SHOPPE%',        NULL, 'Fitness',               100)
 ON CONFLICT (pattern, min_spent) DO UPDATE
     SET subcategory = EXCLUDED.subcategory,
         priority    = EXCLUDED.priority;

@@ -65,6 +65,15 @@ CREATE TABLE IF NOT EXISTS category_rules (
     UNIQUE NULLS NOT DISTINCT (pattern, min_spent)
 );
 
+
+CREATE TABLE IF NOT EXISTS category_overrides (
+    row_hash       text PRIMARY KEY, -- overrides must survive trunc and load.
+    subcategory    text NOT NULL REFERENCES categories (subcategory) ON UPDATE CASCADE,
+    note           text,
+    created_at     timestamptz NOT NULL DEFAULT now()
+);
+
+
 CREATE OR REPLACE VIEW transactions_categorized AS
 SELECT
     t.id,
