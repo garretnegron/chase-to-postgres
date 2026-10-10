@@ -38,6 +38,7 @@ INSERT INTO categories (subcategory, category, tax_relevant, is_spending) VALUES
     -- Entertainment
     ('Subscriptions',          'Entertainment',         false, true),
     ('Events & Hobbies',       'Entertainment',         false, true),
+    ('Hockey',                 'Entertainment',         false, true),
 
     -- Shopping
     ('Clothing',               'Shopping',              false, true),

@@ -58,7 +58,9 @@ CREATE TABLE IF NOT EXISTS categories (
 
 CREATE TABLE IF NOT EXISTS category_rules (
     id              serial PRIMARY KEY,
-    pattern         text NOT NULL UNIQUE,
+    pattern         text NOT NULL,
+    min_spent       numeric(12, 2),  -- optional: only applies if at least this much was spent
     subcategory     text NOT NULL REFERENCES categories (subcategory) ON UPDATE CASCADE,
-    priority        integer NOT NULL DEFAULT 100
+    priority        integer NOT NULL DEFAULT 100,
+    UNIQUE NULLS NOT DISTINCT (pattern, min_spent)
 );
