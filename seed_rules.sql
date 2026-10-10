@@ -143,7 +143,8 @@ INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
     -- Gas & parking
     ('%SUNOCO%',                NULL, 'Gas',                   100),
     ('%VERONA DELTA%',          NULL, 'Gas',                   100),  -- not just %DELTA%: that's an airline
-    ('%RIVER STREET GARAGE%',   NULL, 'Tolls & Parking',       100),
+    ('%RIVER STREET GARAGE%',   NULL, 'Restaurants',           50),
+    ('%E-ZPASS%',               NULL, 'Tolls & Parking',       100),
 
     -- Hockey & events
     ('%MONTCLAIR STATE ICE%',   NULL, 'Hockey',                100),

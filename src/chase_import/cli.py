@@ -1,4 +1,4 @@
-"""Command line: chase-import init | load | summary"""
+"""Command line: chase-import init | load | summary | categorize"""
 
 from __future__ import annotations
 
@@ -16,6 +16,8 @@ Load Chase CSV / Excel / Parquet exports into Postgres.
   chase-import load file.csv --account 1234 --name "Dad checking"
   chase-import load downloads/ --dry-run  check files without touching the DB
   chase-import summary                    what's in the database
+  chase-import categorize --dry-run       ask Claude about uncategorized merchants, save nothing
+  chase-import categorize                 ask Claude and save the answers
 
 The database comes from --db or DATABASE_URL (a .env file works too), e.g.
   postgresql://postgres:password@localhost:5432/finances
@@ -113,6 +115,20 @@ def cmd_summary(args) -> None:
         print(f"{name:<30} {count:>7} transactions   {first} to {last}")
 
 
+def cmd_categorize(args) -> None:
+    from . import categorize, db
+
+    with db.connect(_db_url(args)) as conn:
+        found = categorize.run(conn, dry_run=args.dry_run, limit=args.limit)
+
+    if args.dry_run:
+        for merchant, sub in found.items():
+            print(f"{merchant:<45} -> {sub}")
+
+    verb = "would be" if args.dry_run else "were"
+    print(f"Done. {len(found)} merchants {verb} categorized.")
+
+
 def main(argv=None) -> None:
     try:
         from dotenv import load_dotenv
@@ -141,6 +157,11 @@ def main(argv=None) -> None:
     sub.add_parser("summary", help="show what's loaded").set_defaults(
         func=cmd_summary
     )
+
+    cp = sub.add_parser("categorize", help="ask Claude to categorize leftover merchants")
+    cp.add_argument("--dry-run", action="store_true", help="show answers, save nothing")
+    cp.add_argument("--limit", type=int, help="only ask about the N biggest merchants")
+    cp.set_defaults(func=cmd_categorize)
 
     args = ap.parse_args(argv)
     args.func(args)
