@@ -152,7 +152,7 @@ def cmd_dashboard(args) -> None:
 
     env = os.environ.copy()
     env["DATABASE_URL"] = _db_url(args)
-    script = Path(__file__).with_name("dashboard.py")
+    script = Path(__file__).parent / "dashboard" / "app.py"
     subprocess.run(
         [
             sys.executable, "-m", "streamlit", "run", str(script),
