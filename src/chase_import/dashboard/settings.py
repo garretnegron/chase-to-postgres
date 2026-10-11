@@ -37,6 +37,10 @@ def problems_with(edited: pd.DataFrame) -> list[str]:
         problems.append("Every row needs a subcategory and a group.")
     if names.str.lower().duplicated().any():
         problems.append("Two subcategories can't have the same name.")
+    both = edited["is_spending"] & edited["is_income"]
+    if both.any():
+        problems.append("A subcategory can't be both spending and income: "
+                        + ", ".join(names[both]) + ".")
     if PROTECTED in edited.index and names[PROTECTED] != PROTECTED:
         problems.append(f"'{PROTECTED}' can't be renamed: it's what uncategorized "
                         "transactions fall back to.")
@@ -63,6 +67,10 @@ def edit_card(cats: pd.DataFrame) -> None:
                 "is_spending": st.column_config.CheckboxColumn(
                     "Counts as spending", help="Off for income, transfers and card payments"
                 ),
+                "is_income": st.column_config.CheckboxColumn(
+                    "Is income", help="On for paychecks and other money you earn. Off for "
+                    "transfers and card payments, which just move your own money around"
+                ),
                 "tax_relevant": st.column_config.CheckboxColumn("Tax-relevant"),
             },
             key=f"settings-edit-{hash(tuple(map(tuple, table.values)))}",
@@ -81,7 +89,8 @@ def edit_card(cats: pd.DataFrame) -> None:
             return
 
         rows = [
-            (old, r.subcategory.strip(), r.category.strip(), bool(r.is_spending), bool(r.tax_relevant))
+            (old, r.subcategory.strip(), r.category.strip(),
+             bool(r.is_spending), bool(r.is_income), bool(r.tax_relevant))
             for old, r in edited[changed].iterrows()
         ]
         try:
@@ -107,20 +116,28 @@ def add_card(cats: pd.DataFrame) -> None:
         if group == NEW_GROUP:
             group = col_group.text_input("New group name", key="add-new-group").strip()
 
-        is_spending = st.checkbox("Counts as spending", value=True, key="add-spending",
-                                  help="Turn off for income, transfers and card payments.")
-        tax_relevant = st.checkbox("Tax-relevant", key="add-tax")
+        col_spending, col_income, col_tax = st.columns(3)
+        is_spending = col_spending.checkbox(
+            "Counts as spending", value=True, key="add-spending",
+            help="Turn off for income, transfers and card payments.")
+        is_income = col_income.checkbox(
+            "Is income", key="add-income",
+            help="Paychecks and other money you earn. Not transfers or card payments.")
+        tax_relevant = col_tax.checkbox("Tax-relevant", key="add-tax")
+        if is_spending and is_income:
+            st.caption("Pick one: something can't be both spending and income.")
 
-        if not st.button("Add", disabled=not (name and group), key="add-button"):
+        if not st.button("Add", disabled=not (name and group) or (is_spending and is_income),
+                         key="add-button"):
             return
         if name.lower() in cats["subcategory"].str.lower().values:
             st.error(f"'{name}' already exists.")
             return
 
-        add_category(name, group, is_spending, tax_relevant)
+        add_category(name, group, is_spending, is_income, tax_relevant)
         # Empty the boxes for next time. Widget values live in session_state
         # under their keys; deleting them before the rerun resets the widgets.
-        for key in ("add-name", "add-new-group", "add-group", "add-spending", "add-tax"):
+        for key in ("add-name", "add-new-group", "add-group", "add-spending", "add-income", "add-tax"):
             st.session_state.pop(key, None)
         done(f"Added '{name}' to {group}.")
 
@@ -178,7 +195,7 @@ def file_card(cats: pd.DataFrame, show_export: bool = True) -> None:
 
         preview = pd.DataFrame(
             [("New", *row) for row in plan.new] + [("Update", *row) for row in plan.changed],
-            columns=["Change", "Subcategory", "Group", "Counts as spending", "Tax-relevant"],
+            columns=["Change", "Subcategory", "Group", "Counts as spending", "Is income", "Tax-relevant"],
         )
         st.dataframe(preview, hide_index=True)
 

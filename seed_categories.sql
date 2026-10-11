@@ -77,3 +77,6 @@ INSERT INTO categories (subcategory, category, tax_relevant, is_spending) VALUES
     -- Other
     ('Uncategorized',          'Other',                 false, true)
 ON CONFLICT (subcategory) DO NOTHING;
+
+-- What counts as income on the dashboard
+UPDATE categories SET is_income = true WHERE subcategory IN ('Paycheck', 'Other Income');

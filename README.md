@@ -178,7 +178,7 @@ The date and account pickers at the top apply to every tab.
 | Tab | What it shows |
 |---|---|
 | **Import** | Pick your Chase downloads and press **Load**, then **Categorize with AI**. The same thing as `load` and `categorize`, without the terminal |
-| **Overview** | Spent, average per month, money in, and the difference; spending by month stacked by group; your top merchants |
+| **Overview** | Spent, average per month, income, and the difference; spending by month stacked by group; your top merchants |
 | **Categories** | Pick one group (say, Food & Drink) to see its subcategories month by month and its top merchants |
 | **Review** | A table of transactions you can re-categorize from a dropdown. Filter by who decided (AI, rule, by hand, uncategorized) or search a merchant, change subcategories, then press **Save** |
 | **Settings** | Your category list: edit it in a table, import or export it as a spreadsheet, add one, or remove one (you choose where its transactions go) |
@@ -186,8 +186,10 @@ The date and account pickers at the top apply to every tab.
 Good to know:
 
 - Only **spending** counts in the totals and charts: subcategories with
-  `is_spending = false` (income, transfers, card payments) are left out, and
-  income shows up in **Money in** instead.
+  `is_spending = false` (income, transfers, card payments) are left out.
+- **Income** counts only subcategories marked **Is income** (paychecks, say).
+  Card payments and transfers between your own accounts aren't income: paying
+  a card shows up as money *out* of checking and money *in* to the card.
 - Each group keeps the same color everywhere. The 7 biggest get their own color,
   and the rest are combined into gray **All other**.
 - Fixes saved on the **Review** tab are overrides (see below), so they outrank rules
@@ -208,9 +210,13 @@ list, upload one of the files in `starter_lists/` (or download the blank templat
 and fill it in). Uploading adds new subcategories and updates changed ones; it
 never removes anything.
 
-| Group | Subcategory | Counts as spending | Tax-relevant |
-|---|---|---|---|
-| Food & Drink | Groceries | yes | no |
+| Group | Subcategory | Counts as spending | Is income | Tax-relevant |
+|---|---|---|---|---|
+| Food & Drink | Groceries | yes | no | no |
+| Income | Paycheck | no | yes | no |
+
+The yes/no columns are optional. Left blank, a subcategory you already have
+keeps its setting.
 
 **The SQL way:** `seed_categories.sql`, below. Once you manage categories in the
 dashboard, the database is the real list and the seed files are just a starting
@@ -219,10 +225,12 @@ point for new installs.
 #### `seed_categories.sql`
 
 Two levels: a **group** (`Food & Drink`) and a **subcategory** (`Restaurants`).
-Each subcategory also has two flags:
+Each subcategory also has three flags:
 
 - `is_spending`: `false` for Income and Money Movement (transfers, card payments),
   so they don't inflate your spending totals
+- `is_income`: `true` for money you earn (paychecks). This is what the dashboard's
+  **Income** adds up; transfers and card payments stay out of it
 - `tax_relevant`: `true` for things like tuition or charity, so tax time is one query
 
 Add a row and re-run the file. Renaming a subcategory in the database
@@ -325,7 +333,7 @@ GROUP BY subcategory;
 |---|---|
 | `accounts` | One row per account: last 4 digits, checking or credit card, nickname |
 | `transactions` | Every imported transaction, exactly as Chase gave it. Amounts are negative for money out |
-| `categories` | Your groups and subcategories, with `is_spending` and `tax_relevant` |
+| `categories` | Your groups and subcategories, with `is_spending`, `is_income` and `tax_relevant` |
 | `category_rules` | Your patterns |
 | `category_overrides` | Manual fixes, by transaction fingerprint |
 | `merchant_categories` | Claude's saved answers, by merchant |

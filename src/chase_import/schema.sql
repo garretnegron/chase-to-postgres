@@ -63,6 +63,23 @@ INSERT INTO categories (subcategory, category)
 VALUES ('Uncategorized', 'Other')
 ON CONFLICT (subcategory) DO NOTHING;
 
+-- is_income: counts toward "Income" on the dashboard (paychecks, yes; card
+-- payments and transfers between your own accounts, no). Added after the table
+-- first shipped, so older databases get the column here. The first time it's
+-- added, anything in a group called "Income" starts out ticked; after that
+-- it's yours to change in Settings.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'categories' AND column_name = 'is_income'
+    ) THEN
+        ALTER TABLE categories ADD COLUMN is_income boolean NOT NULL DEFAULT false;
+        UPDATE categories SET is_income = true WHERE lower(category) = 'income';
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS category_rules (
     id              serial PRIMARY KEY,
     pattern         text NOT NULL,
@@ -113,7 +130,8 @@ SELECT
         WHEN m.subcategory         IS NOT NULL THEN 'ai'
     END                                           AS category_source,
     t.row_hash,
-    merchant_name(t.description)                  AS merchant
+    merchant_name(t.description)                  AS merchant,
+    c.is_income                                   -- new columns must go last in a view
 FROM transactions t
 JOIN accounts a ON a.id = t.account_id
 LEFT JOIN category_overrides o ON o.row_hash = t.row_hash

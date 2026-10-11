@@ -31,7 +31,7 @@ def load_transactions() -> pd.DataFrame:
             cur.execute(
                 """
                 SELECT row_hash, date, account, merchant, amount, category, subcategory,
-                       is_spending, tax_relevant, category_source
+                       is_spending, is_income, tax_relevant, category_source
                 FROM transactions_categorized
                 """
             )
@@ -44,7 +44,7 @@ def load_transactions() -> pd.DataFrame:
 
     # Money coming IN that nobody has categorized yet (a paycheck, a card payment,
     # a refund) isn't spending. Counted as spending it would subtract from your
-    # totals and push months below zero. Treat it as money in until it's categorized.
+    # totals and push months below zero. Leave it out until it's categorized.
     uncategorized_in = df["category_source"].isna() & (df["amount"] > 0)
     df["is_spending"] = df["is_spending"] & ~uncategorized_in
     return df
@@ -87,7 +87,7 @@ def load_category_table() -> pd.DataFrame:
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.cursor() as cur:
         cur.execute(
             """
-            SELECT subcategory, category, is_spending, tax_relevant
+            SELECT subcategory, category, is_spending, is_income, tax_relevant
             FROM categories
             ORDER BY category, subcategory
             """
@@ -103,19 +103,21 @@ def clear_caches() -> None:
     load_category_table.clear()
 
 
-def add_category(subcategory: str, group: str, is_spending: bool, tax_relevant: bool) -> None:
+def add_category(
+    subcategory: str, group: str, is_spending: bool, is_income: bool, tax_relevant: bool
+) -> None:
     """Add one subcategory. A new group name creates the group."""
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         conn.execute(
-            "INSERT INTO categories (subcategory, category, is_spending, tax_relevant) "
-            "VALUES (%s, %s, %s, %s)",
-            (subcategory, group, is_spending, tax_relevant),
+            "INSERT INTO categories (subcategory, category, is_spending, is_income, tax_relevant) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (subcategory, group, is_spending, is_income, tax_relevant),
         )
     clear_caches()
 
 
-def update_categories(rows: list[tuple[str, str, str, bool, bool]]) -> None:
-    """Save edits: each row is (old name, new name, group, is_spending, tax_relevant).
+def update_categories(rows: list[tuple[str, str, str, bool, bool, bool]]) -> None:
+    """Save edits: each row is (old name, new name, group, is_spending, is_income, tax_relevant).
 
     Renaming works because of ON UPDATE CASCADE: rules, overrides and AI
     answers follow the new name automatically.
@@ -124,29 +126,32 @@ def update_categories(rows: list[tuple[str, str, str, bool, bool]]) -> None:
         cur.executemany(
             """
             UPDATE categories
-            SET subcategory = %s, category = %s, is_spending = %s, tax_relevant = %s
+            SET subcategory = %s, category = %s,
+                is_spending = %s, is_income = %s, tax_relevant = %s
             WHERE subcategory = %s
             """,
-            [(new, group, spending, tax, old) for old, new, group, spending, tax in rows],
+            [(new, group, spending, income, tax, old)
+             for old, new, group, spending, income, tax in rows],
         )
     clear_caches()
 
 
-def apply_category_list(rows: list[tuple[str, str, bool, bool]]) -> None:
+def apply_category_list(rows: list[tuple[str, str, bool, bool, bool]]) -> None:
     """Add or update many subcategories at once, from an uploaded list.
 
-    Each row is (subcategory, group, is_spending, tax_relevant). New names are
+    Each row is (subcategory, group, is_spending, is_income, tax_relevant). New names are
     added; existing ones get the group and flags from the file. Nothing is
     deleted. One transaction: the whole file goes in, or none of it does.
     """
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.transaction(), conn.cursor() as cur:
         cur.executemany(
             """
-            INSERT INTO categories (subcategory, category, is_spending, tax_relevant)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO categories (subcategory, category, is_spending, is_income, tax_relevant)
+            VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (subcategory) DO UPDATE
                 SET category     = EXCLUDED.category,
                     is_spending  = EXCLUDED.is_spending,
+                    is_income    = EXCLUDED.is_income,
                     tax_relevant = EXCLUDED.tax_relevant
             """,
             rows,

@@ -16,14 +16,16 @@ def tile(column, key: str, label: str, value: str) -> None:
 def headline_tiles(view: pd.DataFrame, spending: pd.DataFrame) -> None:
     """Four headline numbers across the top."""
     spent = -spending["amount"].sum()
-    money_in = view.loc[~view["is_spending"] & (view["amount"] > 0), "amount"].sum()
+    # Only subcategories marked "Is income": card payments and transfers between
+    # your own accounts are money moving around, not money earned.
+    money_in = view.loc[view["is_income"], "amount"].sum()
     months = max(spending["date"].dt.to_period("M").nunique(), 1)
 
     t1, t2, t3, t4 = st.columns(4)
     tile(t1, "spent", "Spent", money(spent))
     tile(t2, "avg", "Avg per month", money(spent / months))
-    tile(t3, "in", "Money in", money(money_in))
-    tile(t4, "net", "Money in minus spent", money(money_in - spent))
+    tile(t3, "in", "Income", money(money_in))
+    tile(t4, "net", "Income minus spent", money(money_in - spent))
 
 
 def overview_tab(
