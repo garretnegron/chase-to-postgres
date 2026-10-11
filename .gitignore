@@ -9,6 +9,7 @@ data/
 !tests/sample_data/*
 backups/
 *.dump
+*.local.sql
 
 # Python
 __pycache__/

@@ -164,3 +164,14 @@ INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
 ON CONFLICT (pattern, min_spent) DO UPDATE
     SET subcategory = EXCLUDED.subcategory,
         priority    = EXCLUDED.priority;
+
+INSERT INTO category_rules (pattern, min_spent, subcategory, priority) VALUES
+    ('%GASDIGITALNETWORK%',     NULL, 'Subscriptions',         100),
+    ('%THERATONE%',             NULL, 'Fitness',               100),
+    ('%PRUDENTIAL CTR%',        NULL, 'Events & Hobbies',      100),  -- other spelling
+    ('%TURNING POINT%',         NULL, 'Restaurants',           100),  -- Claude missed this one
+    ('%CHILI''S%',              NULL, 'Restaurants',           100),
+    ('%CHESTNUT MARKET%',       NULL, 'Convenience & Coffee',  100)
+ON CONFLICT (pattern, min_spent) DO UPDATE
+    SET subcategory = EXCLUDED.subcategory,
+        priority    = EXCLUDED.priority;
