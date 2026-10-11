@@ -11,8 +11,9 @@ import pandas as pd
 import streamlit as st
 
 from chase_import.dashboard.categories import categories_tab
-from chase_import.dashboard.data import load_transactions
+from chase_import.dashboard.data import load_subcategories, load_transactions
 from chase_import.dashboard.overview import overview_tab
+from chase_import.dashboard.review import review_tab
 from chase_import.dashboard.theme import apply_card_styles, build_color_key, theme_mode
 
 st.set_page_config(page_title="Spending", page_icon="💸", layout="wide")
@@ -55,10 +56,13 @@ st.title("💸 Spending")
 view = filter_controls(df)
 spending = view[view["is_spending"]]
 
-overview, categories = st.tabs(["Overview", "Categories"])
+overview, categories, review = st.tabs(["Overview", "Categories", "Review"])
 
 with overview:
     overview_tab(view, spending, group_colors, mode)
 
 with categories:
     categories_tab(spending, all_spending, mode)
+
+with review:
+    review_tab(view, load_subcategories())
