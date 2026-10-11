@@ -12,6 +12,7 @@ import streamlit as st
 
 from chase_import.dashboard.categories import categories_tab
 from chase_import.dashboard.data import load_subcategories, load_transactions
+from chase_import.dashboard.load import load_tab, upload_and_load
 from chase_import.dashboard.overview import overview_tab
 from chase_import.dashboard.review import review_tab
 from chase_import.dashboard.theme import apply_card_styles, build_color_key, theme_mode
@@ -44,19 +45,29 @@ def filter_controls(df: pd.DataFrame) -> pd.DataFrame:
 mode = theme_mode()
 apply_card_styles(mode)
 
+st.title("💸 Spending")
+
 df = load_transactions()
 if df.empty:
-    st.info("No transactions yet. Run `chase-import load data` first.")
+    # Day one: no data yet, so there's nothing to filter, chart or categorize.
+    # Show only the upload step; once something is loaded, the next click shows
+    # every tab (including step 2, categorize).
+    st.info("No transactions yet. Add your Chase downloads to get started.")
+    upload_and_load()
     st.stop()
 
 all_spending = df[df["is_spending"]]
 group_colors = build_color_key(all_spending["category"], all_spending["amount"], mode)
 
-st.title("💸 Spending")
 view = filter_controls(df)
 spending = view[view["is_spending"]]
 
-overview, categories, review = st.tabs(["Overview", "Categories", "Review"])
+importer, overview, categories, review = st.tabs(
+    ["Import", "Overview", "Categories", "Review"]
+)
+
+with importer:  # not `import`: that word is reserved by Python
+    load_tab()
 
 with overview:
     overview_tab(view, spending, group_colors, mode)

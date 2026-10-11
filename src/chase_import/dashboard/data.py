@@ -14,13 +14,16 @@ load_dotenv()
 def load_transactions() -> pd.DataFrame:
     """Every transaction with its final category, straight from the view."""
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT row_hash, date, account, merchant, amount, category, subcategory,
-                   is_spending, tax_relevant, category_source
-            FROM transactions_categorized
-            """
-        )
+        try:
+            cur.execute(
+                """
+                SELECT row_hash, date, account, merchant, amount, category, subcategory,
+                       is_spending, tax_relevant, category_source
+                FROM transactions_categorized
+                """
+            )
+        except psycopg.errors.UndefinedTable:
+            return pd.DataFrame()  # brand-new database: the tables don't exist yet
         columns = [c.name for c in cur.description]
         df = pd.DataFrame(cur.fetchall(), columns=columns)
     df["date"] = pd.to_datetime(df["date"])
