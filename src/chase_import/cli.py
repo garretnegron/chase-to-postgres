@@ -116,6 +116,13 @@ def cmd_summary(args) -> None:
 
 
 def cmd_categorize(args) -> None:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        sys.exit(
+            "No API key set. Put ANTHROPIC_API_KEY=... in a .env file. "
+            "(Get one at https://platform.claude.com)."
+        )
+
     from . import categorize, db
 
     with db.connect(_db_url(args)) as conn:
