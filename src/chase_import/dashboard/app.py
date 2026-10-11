@@ -15,6 +15,7 @@ from chase_import.dashboard.data import load_subcategories, load_transactions
 from chase_import.dashboard.load import load_tab, upload_and_load
 from chase_import.dashboard.overview import overview_tab
 from chase_import.dashboard.review import review_tab
+from chase_import.dashboard.settings import settings_tab
 from chase_import.dashboard.theme import apply_card_styles, build_color_key, theme_mode
 
 st.set_page_config(page_title="Spending", page_icon="💸", layout="wide")
@@ -62,8 +63,8 @@ group_colors = build_color_key(all_spending["category"], all_spending["amount"],
 view = filter_controls(df)
 spending = view[view["is_spending"]]
 
-importer, overview, categories, review = st.tabs(
-    ["Import", "Overview", "Categories", "Review"]
+importer, overview, categories, review, settings = st.tabs(
+    ["Import", "Overview", "Categories", "Review", "Settings"]
 )
 
 with importer:  # not `import`: that word is reserved by Python
@@ -77,3 +78,6 @@ with categories:
 
 with review:
     review_tab(view, load_subcategories())
+
+with settings:
+    settings_tab()
