@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+dashboard = ["streamlit"]
 
 [project.scripts]
 chase-import = "chase_import.cli:main"

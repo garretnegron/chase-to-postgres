@@ -142,6 +142,27 @@ def cmd_categorize(args) -> None:
     print(f"Done. {len(found)} merchants {verb} categorized.")
 
 
+def cmd_dashboard(args) -> None:
+    import importlib.util
+    import subprocess
+    from pathlib import Path
+
+    if importlib.util.find_spec("streamlit") is None:
+        sys.exit('The dashboard needs Streamlit. Install it with: pip install -e ".[dashboard]"')
+
+    env = os.environ.copy()
+    env["DATABASE_URL"] = _db_url(args)
+    script = Path(__file__).with_name("dashboard.py")
+    subprocess.run(
+        [
+            sys.executable, "-m", "streamlit", "run", str(script),
+            "--server.address", "localhost",
+            "--browser.gatherUsageStats", "false",
+        ],
+    env=env,
+    )
+
+
 def main(argv=None) -> None:
     try:
         from dotenv import load_dotenv
@@ -175,6 +196,10 @@ def main(argv=None) -> None:
     cp.add_argument("--dry-run", action="store_true", help="show answers, save nothing")
     cp.add_argument("--limit", type=int, help="only ask about the N biggest merchants")
     cp.set_defaults(func=cmd_categorize)
+
+    sub.add_parser("dashboard", help="open the spending dashboard in your browser").set_defaults(
+    func=cmd_dashboard
+    )
 
     args = ap.parse_args(argv)
     args.func(args)
