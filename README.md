@@ -22,6 +22,7 @@ Done. 95 merchants were categorized.
 - 🗓️ **Finds the real purchase date** hidden in checking descriptions (`... VERONA NJ 12/31`)
 - 🏷️ **Categorizes spending** with your own rules first, then Claude (AI) for the leftovers
 - ✋ **Lets you override** any single transaction by hand
+- 📊 **Shows it all in a dashboard** in your browser: spending by month, top merchants, and a table to fix categories
 - 🔒 **Keeps your data local.** Bank files, passwords and keys never go to GitHub
 
 ---
@@ -83,8 +84,11 @@ git clone https://github.com/YOUR_USERNAME/chase-to-postgres.git
 cd chase-to-postgres
 python -m venv .venv
 .venv\Scripts\activate
-pip install -e .
+pip install -e ".[dashboard]"
 ```
+
+The `[dashboard]` part also installs Streamlit for the dashboard. Leave it off
+(`pip install -e .`) if you only want the importer.
 
 > If PowerShell refuses to run `activate`, run this once, then try again:
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
@@ -138,6 +142,7 @@ lists**, so change them to fit your own spending before you run them.
 .venv\Scripts\activate
 chase-import load data
 chase-import categorize
+chase-import dashboard
 ```
 
 That's it. Old files can stay in `data`; re-loading them adds nothing.
@@ -154,6 +159,42 @@ That's it. Old files can stay in `data`; re-loading them adds nothing.
 | `chase-import summary` | Transaction count and date range per account |
 | `chase-import categorize --dry-run --limit 20` | Preview Claude's answers for the 20 biggest uncategorized merchants. Saves nothing |
 | `chase-import categorize` | Ask Claude about every uncategorized merchant and save the answers |
+| `chase-import dashboard` | Open the dashboard in your browser (Ctrl+C in the terminal to stop it) |
+
+---
+
+## Dashboard
+
+```powershell
+chase-import dashboard
+```
+
+Opens <http://localhost:8501> in your browser. It runs on your computer only, and
+nothing is published. If Windows asks about a firewall, **Cancel** is fine. Stop it
+with **Ctrl+C** in the terminal.
+
+The date and account pickers at the top apply to every tab.
+
+| Tab | What it shows |
+|---|---|
+| **Overview** | Spent, average per month, money in, and the difference; spending by month stacked by group; your top merchants |
+| **Categories** | Pick one group (say, Food & Drink) to see its subcategories month by month and its top merchants |
+| **Review** | A table of transactions you can re-categorize from a dropdown. Filter by who decided (AI, rule, by hand, uncategorized) or search a merchant, change subcategories, then press **Save** |
+
+Good to know:
+
+- Only **spending** counts in the totals and charts: subcategories with
+  `is_spending = false` (income, transfers, card payments) are left out, and
+  income shows up in **Money in** instead.
+- Each group keeps the same color everywhere. The 7 biggest get their own color,
+  and the rest are combined into gray **All other**.
+- Fixes saved on the **Review** tab are overrides (see below), so they outrank rules
+  and AI and survive reloads.
+- The dashboard only uses the columns and flags in `transactions_categorized`, never
+  specific category names, so it works with anyone's category list.
+- Data refreshes every 60 seconds. After loading new files, wait a minute, or
+  press **C** in the browser to clear the cache. Saving on the Review tab refreshes
+  right away.
 
 ---
 
@@ -206,6 +247,8 @@ so the merchant stays visible as uncategorized. Saved answers never change on
 their own, and rules and overrides always outrank them.
 
 ### Overrides: fix one transaction
+
+The easiest way is the dashboard's **Review** tab. To fix many at once, use SQL:
 
 ```sql
 -- every visit to one merchant
@@ -322,6 +365,8 @@ description afterwards, which would look like a new transaction.
 | `Could not resolve authentication method` | `ANTHROPIC_API_KEY` is missing from `.env`, or the file isn't saved |
 | `SKIP ... can't tell which account` | Keep Chase's file name, or pass `--account 1234` |
 | `activate` is blocked in PowerShell | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| `The dashboard needs Streamlit` | `pip install -e ".[dashboard]"` |
+| Dashboard: `No module named chase_import.dashboard` | Re-run `pip install -e ".[dashboard]"` |
 
 ---
 
@@ -334,6 +379,12 @@ chase-to-postgres/
 │   ├── parser.py        # reads Chase files, skips pending, fingerprints rows
 │   ├── db.py            # loads into Postgres without duplicates
 │   ├── categorize.py    # asks Claude about leftover merchants
+│   ├── dashboard/       # the Streamlit dashboard
+│   │   ├── app.py       #   what Streamlit runs: page setup, filters, tabs
+│   │   ├── data.py      #   reads from and writes to Postgres
+│   │   ├── theme.py     #   colors and card styling
+│   │   ├── cards.py     #   cards shared by several tabs
+│   │   └── overview.py, categories.py, review.py  # one file per tab
 │   └── schema.sql       # tables, function and views (run by init and load)
 ├── seed_categories.sql  # your category list
 ├── seed_rules.sql       # your rules
