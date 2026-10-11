@@ -212,9 +212,9 @@ def monthly_spending_card(
             st.dataframe(table.style.format("${:,.2f}"))
 
 
-def top_merchants_card(spending: pd.DataFrame, limit: int = 15) -> None:
+def top_merchants_card(spending: pd.DataFrame, limit: int = 15, key: str = "card-merchants") -> None:
     """The merchants you spent the most at."""
-    with st.container(key="card-merchants"):
+    with st.container(key=key):
         st.subheader("Top merchants")
         top = (
             spending.groupby("merchant")
@@ -236,6 +236,25 @@ def top_merchants_card(spending: pd.DataFrame, limit: int = 15) -> None:
         )
 
 
+def categories_tab(spending: pd.DataFrame, all_spending: pd.DataFrame, mode: str) -> None:
+    """Drill into one group: its subcategories month by month, and its merchants."""
+    groups = all_spending.groupby("category")["amount"].sum().sort_values().index  # the group names, biggest spending first
+    group = st.selectbox("Group", groups)
+
+    in_group = spending[spending["category"] == group]
+    if in_group.empty:
+        st.info(f"No {group} spending in the selected dates.")
+        return
+    all_in_group = all_spending[all_spending["category"] == group]
+
+    # Colors for this group's subcategories, from ALL-TIME data so filters don't repaint them
+    sub_colors = build_color_key(all_in_group["subcategory"], all_in_group["amount"], mode)
+
+    monthly_spending_card(in_group, "subcategory", sub_colors, mode,
+                          title=f"{group} by month", key="card-group-monthly")
+    top_merchants_card(in_group, key="card-group-merchants")
+
+
 # =================================================================== the page
 
 mode = theme_mode()
@@ -253,9 +272,12 @@ st.title("💸 Spending")
 view = filter_controls(df)
 spending = view[view["is_spending"]]
 
-(overview,) = st.tabs(["Overview"])
+overview, categories = st.tabs(["Overview", "Categories"])
 
 with overview:
     headline_tiles(view, spending)
     monthly_spending_card(spending, "category", group_colors, mode)
     top_merchants_card(spending)
+
+with categories:
+    categories_tab(spending, all_spending, mode)
