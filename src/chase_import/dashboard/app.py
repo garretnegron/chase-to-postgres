@@ -8,15 +8,20 @@ this file as a script, not as part of the package.
 """
 
 import pandas as pd
+import psycopg
 import streamlit as st
 
 from chase_import.dashboard.categories import categories_tab
-from chase_import.dashboard.data import load_subcategories, load_transactions
+from chase_import.dashboard.data import (
+    ensure_schema, load_category_table, load_subcategories, load_transactions,
+)
 from chase_import.dashboard.load import load_tab, upload_and_load
+from chase_import.dashboard.notify import show_toasts
 from chase_import.dashboard.overview import overview_tab
 from chase_import.dashboard.review import review_tab
 from chase_import.dashboard.settings import settings_tab
-from chase_import.dashboard.theme import apply_card_styles, build_color_key, theme_mode
+from chase_import.dashboard.theme import apply_card_styles, build_color_key, signature, theme_mode
+from chase_import.dashboard.welcome import database_problem, needs_welcome, welcome_page
 
 st.set_page_config(page_title="Spending", page_icon="💸", layout="wide")
 
@@ -45,17 +50,26 @@ def filter_controls(df: pd.DataFrame) -> pd.DataFrame:
 
 mode = theme_mode()
 apply_card_styles(mode)
+show_toasts()  # "Saved!" pop-ups from just before a rerun
 
-st.title("💸 Spending")
+try:
+    ensure_schema()  # creates the tables on a brand-new database
+except (psycopg.OperationalError, KeyError) as error:  # can't connect, or no DATABASE_URL
+    database_problem(error)
+    st.stop()
 
 df = load_transactions()
+cats = load_category_table()
+if needs_welcome(df, cats):
+    welcome_page(df, cats)
+    st.stop()
 if df.empty:
-    # Day one: no data yet, so there's nothing to filter, chart or categorize.
-    # Show only the upload step; once something is loaded, the next click shows
-    # every tab (including step 2, categorize).
+    # Skipped the welcome page with nothing loaded: nothing to chart yet.
     st.info("No transactions yet. Add your Chase downloads to get started.")
     upload_and_load()
     st.stop()
+
+st.title("💸 Spending")
 
 all_spending = df[df["is_spending"]]
 group_colors = build_color_key(all_spending["category"], all_spending["amount"], mode)
@@ -81,3 +95,5 @@ with review:
 
 with settings:
     settings_tab()
+
+signature()

@@ -79,3 +79,12 @@ def build_color_key(labels: pd.Series, amounts: pd.Series, mode: str) -> ColorKe
 
 def money(x: float) -> str:
     return f"-${-x:,.0f}" if x < 0 else f"${x:,.0f}"
+
+
+def signature() -> None:
+    """A small credit line at the bottom of the page."""
+    st.markdown(
+        '<p style="text-align:center; opacity:0.6; font-size:0.85rem; margin-top:2.5rem">'
+        "Designed &amp; built by Garret Negron</p>",
+        unsafe_allow_html=True,
+    )

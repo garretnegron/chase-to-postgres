@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from chase_import.dashboard.data import save_overrides
+from chase_import.dashboard.notify import rerun_with
 
 # What the "Show" picker offers, and the category_source each one keeps.
 # None means uncategorized; "all" means don't filter.
@@ -35,10 +36,6 @@ def pick_rows(view: pd.DataFrame) -> pd.DataFrame:
 
 def review_tab(view: pd.DataFrame, subcategories: list[str]) -> None:
     """Pick rows, change their subcategory in the table, then save."""
-    saved = st.session_state.pop("review_saved", None)  # set just before the rerun below
-    if saved:
-        st.toast(f"Saved {saved} fix(es).")
-
     rows = pick_rows(view)
     if rows.empty:
         st.info("Nothing to review here.")
@@ -76,5 +73,4 @@ def review_tab(view: pd.DataFrame, subcategories: list[str]) -> None:
         if st.button(f"Save {count} change(s)", type="primary", disabled=count == 0,
                      key="review-save"):
             save_overrides(edited.loc[changed, "subcategory"].to_dict())
-            st.session_state["review_saved"] = count
-            st.rerun()
+            rerun_with(f"Saved {count} fix(es).")

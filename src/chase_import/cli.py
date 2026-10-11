@@ -158,6 +158,7 @@ def cmd_dashboard(args) -> None:
             sys.executable, "-m", "streamlit", "run", str(script),
             "--server.address", "localhost",
             "--browser.gatherUsageStats", "false",
+            "--client.toolbarMode", "minimal",  # hides "Deploy" and the developer menu
         ],
     env=env,
     )

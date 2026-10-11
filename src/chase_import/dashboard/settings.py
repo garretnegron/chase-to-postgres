@@ -11,6 +11,7 @@ from chase_import.dashboard.data import (
     add_category, apply_category_list, category_usage, load_category_table, remove_category,
     update_categories,
 )
+from chase_import.dashboard.notify import rerun_with
 
 # The view falls back to this name for anything nobody has categorized,
 # so it must always exist under exactly this name.
@@ -20,9 +21,8 @@ XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def done(message: str) -> None:
-    """Remember a message, then start the page over so every tab sees the change."""
-    st.session_state["settings_msg"] = message
-    st.rerun()
+    """Start the page over so every tab sees the change, with `message` as a pop-up."""
+    rerun_with(message)
 
 
 # ---------------------------------------------------------------- edit
@@ -128,23 +128,27 @@ def add_card(cats: pd.DataFrame) -> None:
 # ---------------------------------------------------------------- spreadsheet
 
 
-def file_card(cats: pd.DataFrame) -> None:
-    """Download your list or a template; upload a list to add or update many at once."""
+def file_card(cats: pd.DataFrame, show_export: bool = True) -> None:
+    """Download your list or a template; upload a list to add or update many at once.
+
+    show_export=False hides "Download my categories" (the welcome page has nothing to export yet).
+    """
     with st.container(key="card-settings-file"):
         st.subheader("Import or export a category list")
         st.caption("Edit your categories in Excel, or start from someone else's list. "
                    "Uploading adds new subcategories and updates changed ones. It never "
-                   "removes anything: use Remove below for that.")
+                   "removes anything (that's the Remove card on Settings).")
 
         col_template, col_mine = st.columns(2)
         col_template.download_button(
             "Download a blank template", data=to_excel_bytes(template()),
             file_name="category_template.xlsx", mime=XLSX, key="cat-template",
         )
-        col_mine.download_button(
-            "Download my categories", data=to_excel_bytes(to_sheet(cats)),
-            file_name="my_categories.xlsx", mime=XLSX, key="cat-export",
-        )
+        if show_export:
+            col_mine.download_button(
+                "Download my categories", data=to_excel_bytes(to_sheet(cats)),
+                file_name="my_categories.xlsx", mime=XLSX, key="cat-export",
+            )
 
         # Bumping this number after Apply gives a fresh, empty uploader
         # (a file uploader can't be emptied directly).
@@ -232,10 +236,6 @@ def remove_card(cats: pd.DataFrame) -> None:
 
 def settings_tab() -> None:
     """Edit, add and remove categories."""
-    message = st.session_state.pop("settings_msg", None)  # set by done() before the rerun
-    if message:
-        st.toast(message)
-
     cats = load_category_table()
     edit_card(cats)
     file_card(cats)

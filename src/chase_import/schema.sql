@@ -99,7 +99,8 @@ CREATE OR REPLACE VIEW transactions_categorized AS
 SELECT
     t.id,
     coalesce(t.transaction_date, t.posted_date)  AS date,
-    a.nickname                                    AS account,
+    -- the nickname if you gave one, else e.g. "Checking ...6911"
+    coalesce(a.nickname, initcap(replace(a.kind, '_', ' ')) || ' ...' || a.last4) AS account,
     t.description,
     t.amount,
     c.category,

@@ -7,7 +7,20 @@ import psycopg
 import streamlit as st
 from dotenv import load_dotenv
 
+from chase_import import db
+
 load_dotenv()
+
+
+@st.cache_resource
+def ensure_schema() -> None:
+    """Create or update the tables, once per dashboard start.
+
+    cache_resource runs this the first time only. If it fails (say, Postgres
+    isn't running), nothing is cached, so the next refresh tries again.
+    """
+    with db.connect(os.environ["DATABASE_URL"]) as conn:
+        db.init_schema(conn)
 
 
 @st.cache_data(ttl=60)
@@ -28,6 +41,12 @@ def load_transactions() -> pd.DataFrame:
         df = pd.DataFrame(cur.fetchall(), columns=columns)
     df["date"] = pd.to_datetime(df["date"])
     df["amount"] = df["amount"].astype(float)
+
+    # Money coming IN that nobody has categorized yet (a paycheck, a card payment,
+    # a refund) isn't spending. Counted as spending it would subtract from your
+    # totals and push months below zero. Treat it as money in until it's categorized.
+    uncategorized_in = df["category_source"].isna() & (df["amount"] > 0)
+    df["is_spending"] = df["is_spending"] & ~uncategorized_in
     return df
 
 

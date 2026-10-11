@@ -194,9 +194,8 @@ Good to know:
   and AI and survive reloads.
 - The dashboard only uses the columns and flags in `transactions_categorized`, never
   specific category names, so it works with anyone's category list.
-- Data refreshes every 60 seconds. After loading new files, wait a minute, or
-  press **C** in the browser to clear the cache. Saving on the Review tab refreshes
-  right away.
+- Loading on the Import tab and saving on Review or Settings refresh everything
+  right away. After loading from the terminal instead, give it up to a minute.
 
 ---
 
