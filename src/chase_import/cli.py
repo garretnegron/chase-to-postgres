@@ -1,4 +1,4 @@
-"""Command line: chase-import init | load | summary | categorize"""
+"""Command line: chase-import init | load | summary | categorize | dashboard | shortcut"""
 
 from __future__ import annotations
 
@@ -18,6 +18,8 @@ Load Chase CSV / Excel / Parquet exports into Postgres.
   chase-import summary                    what's in the database
   chase-import categorize --dry-run       ask Claude about uncategorized merchants, save nothing
   chase-import categorize                 ask Claude and save the answers
+  chase-import dashboard                  open the dashboard in your browser
+  chase-import shortcut                   put a Spending Dashboard icon on the desktop (Windows)
 
 The database comes from --db or DATABASE_URL (a .env file works too), e.g.
   postgresql://postgres:password@localhost:5432/finances
@@ -142,26 +144,110 @@ def cmd_categorize(args) -> None:
     print(f"Done. {len(found)} merchants {verb} categorized.")
 
 
+DASHBOARD_URL = "http://localhost:8501"
+
+
+def _dashboard_running() -> bool:
+    """Is a dashboard already answering on this computer?"""
+    import urllib.request
+
+    try:
+        urllib.request.urlopen(DASHBOARD_URL + "/_stcore/health", timeout=1)
+        return True
+    except OSError:  # nothing listening (URLError is a kind of OSError)
+        return False
+
+
 def cmd_dashboard(args) -> None:
     import importlib.util
     import subprocess
+    import time
+    import webbrowser
     from pathlib import Path
 
     if importlib.util.find_spec("streamlit") is None:
         sys.exit('The dashboard needs Streamlit. Install it with: pip install -e ".[dashboard]"')
 
+    # Double-clicked twice? Don't start a second copy, just show the first one.
+    if _dashboard_running():
+        print("The dashboard is already running. Opening it in your browser.")
+        webbrowser.open(DASHBOARD_URL)
+        return
+
     env = os.environ.copy()
     env["DATABASE_URL"] = _db_url(args)
     script = Path(__file__).parent / "dashboard" / "app.py"
-    subprocess.run(
+    server = subprocess.Popen(
         [
             sys.executable, "-m", "streamlit", "run", str(script),
             "--server.address", "localhost",
+            "--server.port", "8501",
+            # headless: Streamlit doesn't open the browser or ask for an email on
+            # first run (a question nobody would see in a minimized window).
+            # We open the browser ourselves once the dashboard is ready.
+            "--server.headless", "true",
             "--browser.gatherUsageStats", "false",
             "--client.toolbarMode", "minimal",  # hides "Deploy" and the developer menu
         ],
-    env=env,
+        env=env,
     )
+
+    # Wait (up to 30 seconds) for it to answer, then open the browser.
+    for _ in range(60):
+        if server.poll() is not None:  # it stopped on its own: an error was printed above
+            sys.exit(server.returncode or 1)
+        if _dashboard_running():
+            print(f"Dashboard ready at {DASHBOARD_URL}")
+            webbrowser.open(DASHBOARD_URL)
+            break
+        time.sleep(0.5)
+
+    try:
+        server.wait()  # keep running until the window is closed or Ctrl+C
+    except KeyboardInterrupt:
+        server.terminate()
+
+
+def cmd_shortcut(args) -> None:
+    """Put a "Spending Dashboard" icon on the Windows desktop."""
+    import subprocess
+    from pathlib import Path
+
+    if os.name != "nt":
+        sys.exit("The desktop shortcut is for Windows. Run `chase-import dashboard` instead.")
+
+    project = Path(__file__).resolve().parents[2]  # src/chase_import/cli.py -> project folder
+    launcher = project / "Spending Dashboard.bat"
+    icon = project / "assets" / "spending.ico"
+    if not launcher.exists():
+        sys.exit(f"Can't find {launcher}.")
+
+    def quoted(path: Path) -> str:
+        """A path as a PowerShell 'string' (a ' inside, as in O'Brien, is written '')."""
+        return "'" + str(path).replace("'", "''") + "'"
+
+    # Windows makes shortcuts through a built-in COM object, easiest to reach
+    # from PowerShell. GetFolderPath finds the real desktop, even when OneDrive
+    # has moved it. WindowStyle 7 = start minimized: the black window sits in the
+    # taskbar (closing it stops the dashboard) instead of in the way.
+    script = f"""
+$desktop = [Environment]::GetFolderPath('Desktop')
+$link = (New-Object -ComObject WScript.Shell).CreateShortcut("$desktop\\Spending Dashboard.lnk")
+$link.TargetPath = {quoted(launcher)}
+$link.WorkingDirectory = {quoted(project)}
+$link.IconLocation = {quoted(icon)}
+$link.WindowStyle = 7
+$link.Description = 'Open the spending dashboard'
+$link.Save()
+Write-Output "$desktop\\Spending Dashboard.lnk"
+"""
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        sys.exit(f"Couldn't create the shortcut:\n{result.stderr.strip()}")
+    print(f"Created {result.stdout.strip()}")
 
 
 def main(argv=None) -> None:
@@ -199,7 +285,10 @@ def main(argv=None) -> None:
     cp.set_defaults(func=cmd_categorize)
 
     sub.add_parser("dashboard", help="open the spending dashboard in your browser").set_defaults(
-    func=cmd_dashboard
+        func=cmd_dashboard
+    )
+    sub.add_parser("shortcut", help="put a Spending Dashboard icon on the Windows desktop").set_defaults(
+        func=cmd_shortcut
     )
 
     args = ap.parse_args(argv)

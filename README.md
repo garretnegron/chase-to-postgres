@@ -127,6 +127,20 @@ or in pgAdmin's **Query Tool**, and run it, **in this order**:
 Both are safe to run again any time. The files in this repo are **one person's
 lists**, so change them to fit your own spending before you run them.
 
+(Or skip this step and upload a category list from the dashboard's welcome
+page instead: see `starter_lists/`.)
+
+### 6. Put an icon on the desktop (Windows)
+
+```powershell
+chase-import shortcut
+```
+
+This adds a **Spending Dashboard** icon to the desktop. Double-click it to open
+the dashboard: no terminal, no typing. A small black window opens minimized in
+the taskbar; that window *is* the dashboard, so closing it stops it.
+Double-clicking again while it's running just brings the dashboard back up.
+
 ---
 
 ## Everyday use
@@ -160,10 +174,13 @@ That's it. Old files can stay in `data`; re-loading them adds nothing.
 | `chase-import categorize --dry-run --limit 20` | Preview Claude's answers for the 20 biggest uncategorized merchants. Saves nothing |
 | `chase-import categorize` | Ask Claude about every uncategorized merchant and save the answers |
 | `chase-import dashboard` | Open the dashboard in your browser (Ctrl+C in the terminal to stop it) |
+| `chase-import shortcut` | Put a **Spending Dashboard** icon on the Windows desktop |
 
 ---
 
 ## Dashboard
+
+Double-click the **Spending Dashboard** icon (see setup step 6), or run:
 
 ```powershell
 chase-import dashboard
@@ -412,6 +429,8 @@ chase-to-postgres/
 │   │   └── load.py, overview.py, categories.py, review.py, settings.py  # one file per tab
 │   └── schema.sql       # tables, function and views (run by init and load)
 ├── starter_lists/       # category lists to upload in Settings (.csv)
+├── Spending Dashboard.bat  # double-click to open the dashboard (the desktop icon runs it)
+├── assets/              # the desktop icon
 ├── seed_categories.sql  # your category list
 ├── seed_rules.sql       # your rules
 ├── tests/               # parser tests with made-up sample files
