@@ -1,0 +1,39 @@
+Group,Subcategory,Counts as spending,Tax-relevant
+Income,Paycheck,no,no
+Income,Other Income,no,no
+Food & Drink,Restaurants,yes,no
+Food & Drink,Fast Food & Takeout,yes,no
+Food & Drink,Convenience & Coffee,yes,no
+Groceries,Groceries,yes,no
+Gas,Gas,yes,no
+Automotive,Tolls & Parking,yes,no
+Automotive,Car Maintenance,yes,no
+Automotive,Car Insurance & MVC,yes,no
+Travel,Flights & Lodging,yes,no
+Travel,Rideshare & Transit,yes,no
+Home,Rent,yes,no
+Home,Household & Furniture,yes,no
+Bills & Utilities,Phone & Internet,yes,no
+Bills & Utilities,Utilities,yes,no
+Entertainment,Subscriptions,yes,no
+Entertainment,Events & Hobbies,yes,no
+Entertainment,Hockey,yes,no
+Shopping,Clothing,yes,no
+Shopping,Electronics & Tech,yes,no
+Shopping,General Shopping,yes,no
+Health & Wellness,Medical & Pharmacy,yes,yes
+Health & Wellness,Fitness,yes,no
+Personal,Personal Care,yes,no
+Education,Tuition & Fees,yes,yes
+Education,Books & Supplies,yes,yes
+Gifts & Donations,Gifts,yes,no
+Gifts & Donations,Charity,yes,yes
+Professional Services,Professional Services,yes,no
+Fees & Adjustments,Bank Fees & Interest,yes,no
+Money Movement,Transfers,no,no
+Money Movement,Venmo & Zelle,no,no
+Money Movement,Credit Card Payment,no,no
+Money Movement,Savings & Investing,no,no
+Money Movement,Loan Payment,no,no
+Money Movement,Cash Withdrawal,yes,no
+Other,Uncategorized,yes,no

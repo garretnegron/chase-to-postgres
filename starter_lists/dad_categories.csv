@@ -1,0 +1,32 @@
+Group,Subcategory,Counts as spending,Tax-relevant
+Income,Paycheck,no,no
+Income,Other Income,no,no
+Money Movement,Cash Transfer,no,no
+Money Movement,Credit Card Payment,no,no
+Money Movement,Cash Withdrawal,yes,no
+Shopping,Amazon,yes,no
+Shopping,Retail Purchases,yes,no
+Shopping,Subscriptions,yes,no
+Food,Groceries,yes,no
+Food,Meals,yes,no
+Auto,Gasoline,yes,no
+Auto,Parking,yes,no
+Auto,Tolls,yes,no
+Auto,Vehicle Maintenance Costs,yes,no
+Auto,Vehicle Registration Fees,yes,no
+Travel,Car Rental,yes,no
+Travel,Hotel,yes,no
+Travel,Transportation,yes,no
+Travel,Travel,yes,no
+Home,Home Defense,yes,no
+Home,Home Protection,yes,no
+Home,Property Management Materials,yes,yes
+Health & Personal,Healthcare,yes,no
+Health & Personal,Eye-ware,yes,no
+Health & Personal,Dry Cleaning,yes,no
+Health & Personal,Vet Care,yes,no
+Work & Office,Office Supplies,yes,yes
+Work & Office,Postage,yes,no
+Entertainment,Entertainment,yes,no
+Education,Tuition,yes,yes
+Other,Uncategorized,yes,no

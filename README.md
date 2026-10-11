@@ -177,9 +177,11 @@ The date and account pickers at the top apply to every tab.
 
 | Tab | What it shows |
 |---|---|
+| **Import** | Pick your Chase downloads and press **Load**, then **Categorize with AI**. The same thing as `load` and `categorize`, without the terminal |
 | **Overview** | Spent, average per month, money in, and the difference; spending by month stacked by group; your top merchants |
 | **Categories** | Pick one group (say, Food & Drink) to see its subcategories month by month and its top merchants |
 | **Review** | A table of transactions you can re-categorize from a dropdown. Filter by who decided (AI, rule, by hand, uncategorized) or search a merchant, change subcategories, then press **Save** |
+| **Settings** | Your category list: edit it in a table, import or export it as a spreadsheet, add one, or remove one (you choose where its transactions go) |
 
 Good to know:
 
@@ -200,7 +202,22 @@ Good to know:
 
 ## Managing categories
 
-### Categories: `seed_categories.sql`
+### Categories
+
+**The easy way:** the dashboard's **Settings** tab. To start from a ready-made
+list, upload one of the files in `starter_lists/` (or download the blank template
+and fill it in). Uploading adds new subcategories and updates changed ones; it
+never removes anything.
+
+| Group | Subcategory | Counts as spending | Tax-relevant |
+|---|---|---|---|
+| Food & Drink | Groceries | yes | no |
+
+**The SQL way:** `seed_categories.sql`, below. Once you manage categories in the
+dashboard, the database is the real list and the seed files are just a starting
+point for new installs.
+
+#### `seed_categories.sql`
 
 Two levels: a **group** (`Food & Drink`) and a **subcategory** (`Restaurants`).
 Each subcategory also has two flags:
@@ -379,13 +396,15 @@ chase-to-postgres/
 │   ├── parser.py        # reads Chase files, skips pending, fingerprints rows
 │   ├── db.py            # loads into Postgres without duplicates
 │   ├── categorize.py    # asks Claude about leftover merchants
+│   ├── category_list.py # reads and checks category spreadsheets
 │   ├── dashboard/       # the Streamlit dashboard
 │   │   ├── app.py       #   what Streamlit runs: page setup, filters, tabs
 │   │   ├── data.py      #   reads from and writes to Postgres
 │   │   ├── theme.py     #   colors and card styling
 │   │   ├── cards.py     #   cards shared by several tabs
-│   │   └── overview.py, categories.py, review.py  # one file per tab
+│   │   └── load.py, overview.py, categories.py, review.py, settings.py  # one file per tab
 │   └── schema.sql       # tables, function and views (run by init and load)
+├── starter_lists/       # category lists to upload in Settings (.csv)
 ├── seed_categories.sql  # your category list
 ├── seed_rules.sql       # your rules
 ├── tests/               # parser tests with made-up sample files

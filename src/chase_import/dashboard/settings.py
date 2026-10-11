@@ -4,14 +4,19 @@ import pandas as pd
 import psycopg
 import streamlit as st
 
+from chase_import.category_list import (
+    CategoryFileError, plan_changes, read_file, template, to_excel_bytes, to_sheet,
+)
 from chase_import.dashboard.data import (
-    add_category, category_usage, load_category_table, remove_category, update_categories,
+    add_category, apply_category_list, category_usage, load_category_table, remove_category,
+    update_categories,
 )
 
 # The view falls back to this name for anything nobody has categorized,
 # so it must always exist under exactly this name.
 PROTECTED = "Uncategorized"
 NEW_GROUP = "➕ New group..."
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def done(message: str) -> None:
@@ -120,6 +125,67 @@ def add_card(cats: pd.DataFrame) -> None:
         done(f"Added '{name}' to {group}.")
 
 
+# ---------------------------------------------------------------- spreadsheet
+
+
+def file_card(cats: pd.DataFrame) -> None:
+    """Download your list or a template; upload a list to add or update many at once."""
+    with st.container(key="card-settings-file"):
+        st.subheader("Import or export a category list")
+        st.caption("Edit your categories in Excel, or start from someone else's list. "
+                   "Uploading adds new subcategories and updates changed ones. It never "
+                   "removes anything: use Remove below for that.")
+
+        col_template, col_mine = st.columns(2)
+        col_template.download_button(
+            "Download a blank template", data=to_excel_bytes(template()),
+            file_name="category_template.xlsx", mime=XLSX, key="cat-template",
+        )
+        col_mine.download_button(
+            "Download my categories", data=to_excel_bytes(to_sheet(cats)),
+            file_name="my_categories.xlsx", mime=XLSX, key="cat-export",
+        )
+
+        # Bumping this number after Apply gives a fresh, empty uploader
+        # (a file uploader can't be emptied directly).
+        round_ = st.session_state.get("cat_file_round", 0)
+        upload = st.file_uploader("Upload a category list (.xlsx or .csv)",
+                                  type=["xlsx", "csv"], key=f"cat-file-{round_}")
+        if upload is None:
+            return
+
+        try:
+            plan = plan_changes(read_file(upload.name, upload.getvalue()), cats)
+        except CategoryFileError as e:
+            st.error(str(e))
+            return
+        except Exception as e:  # a damaged or password-protected file, say
+            st.error(f"Couldn't read {upload.name}: {e}")
+            return
+
+        st.markdown(f"**{len(plan.new)}** new · **{len(plan.changed)}** changed · "
+                    f"**{plan.unchanged}** already the same · **{len(plan.problems)}** skipped")
+        if plan.problems:
+            st.warning("These rows will be skipped:\n\n"
+                       + "\n".join(f"- {problem}" for problem in plan.problems))
+        if not plan.to_apply:
+            st.info("Nothing to change: your categories already match this file.")
+            return
+
+        preview = pd.DataFrame(
+            [("New", *row) for row in plan.new] + [("Update", *row) for row in plan.changed],
+            columns=["Change", "Subcategory", "Group", "Counts as spending", "Tax-relevant"],
+        )
+        st.dataframe(preview, hide_index=True)
+
+        if not st.button(f"Apply {len(plan.to_apply)} change(s)", type="primary",
+                         key="cat-file-apply"):
+            return
+        apply_category_list(plan.to_apply)
+        st.session_state["cat_file_round"] = round_ + 1
+        done(f"Added {len(plan.new)} and updated {len(plan.changed)} subcategories.")
+
+
 # ---------------------------------------------------------------- remove
 
 
@@ -172,5 +238,6 @@ def settings_tab() -> None:
 
     cats = load_category_table()
     edit_card(cats)
+    file_card(cats)
     add_card(cats)
     remove_card(cats)

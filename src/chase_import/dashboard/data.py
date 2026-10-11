@@ -113,6 +113,28 @@ def update_categories(rows: list[tuple[str, str, str, bool, bool]]) -> None:
     clear_caches()
 
 
+def apply_category_list(rows: list[tuple[str, str, bool, bool]]) -> None:
+    """Add or update many subcategories at once, from an uploaded list.
+
+    Each row is (subcategory, group, is_spending, tax_relevant). New names are
+    added; existing ones get the group and flags from the file. Nothing is
+    deleted. One transaction: the whole file goes in, or none of it does.
+    """
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.transaction(), conn.cursor() as cur:
+        cur.executemany(
+            """
+            INSERT INTO categories (subcategory, category, is_spending, tax_relevant)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (subcategory) DO UPDATE
+                SET category     = EXCLUDED.category,
+                    is_spending  = EXCLUDED.is_spending,
+                    tax_relevant = EXCLUDED.tax_relevant
+            """,
+            rows,
+        )
+    clear_caches()
+
+
 def category_usage(subcategory: str) -> dict[str, int]:
     """How much points at one subcategory, so you know what removing it moves."""
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.cursor() as cur:
