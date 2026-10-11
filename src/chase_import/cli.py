@@ -76,6 +76,12 @@ def cmd_load(args) -> None:
             continue
         parsed_files.append(parsed)
 
+    if args.name and len({(f.account_last4, f.kind) for f in parsed_files}) > 1:
+        sys.exit(
+        "--name only works when every file is for the same account. "
+        "Load each account's file separately to give it a name."
+        )
+
     if args.dry_run:
         for f in parsed_files:
             ts = f.transactions
