@@ -7,6 +7,8 @@ data/
 *.xls
 *.parquet
 !tests/sample_data/*
+backups/
+*.dump
 
 # Python
 __pycache__/
