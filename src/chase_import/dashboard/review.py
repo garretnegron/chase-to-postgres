@@ -73,7 +73,8 @@ def review_tab(view: pd.DataFrame, subcategories: list[str]) -> None:
 
         changed = edited["subcategory"] != table["subcategory"]
         count = int(changed.sum())
-        if st.button(f"Save {count} change(s)", type="primary", disabled=count == 0):
+        if st.button(f"Save {count} change(s)", type="primary", disabled=count == 0,
+                     key="review-save"):
             save_overrides(edited.loc[changed, "subcategory"].to_dict())
             st.session_state["review_saved"] = count
             st.rerun()

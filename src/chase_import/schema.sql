@@ -56,6 +56,13 @@ CREATE TABLE IF NOT EXISTS categories (
     is_spending     boolean NOT NULL DEFAULT true
 );
 
+-- The view falls back to 'Uncategorized' for anything nobody has categorized,
+-- so it must always exist, even before any category list is loaded. Without it,
+-- a brand-new database would show no transactions at all.
+INSERT INTO categories (subcategory, category)
+VALUES ('Uncategorized', 'Other')
+ON CONFLICT (subcategory) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS category_rules (
     id              serial PRIMARY KEY,
     pattern         text NOT NULL,

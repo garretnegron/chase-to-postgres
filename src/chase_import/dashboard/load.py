@@ -29,7 +29,7 @@ def upload_and_load() -> None:
         )
 
         # Everything below happens only on the rerun right after the click (gotcha #2)
-        if not files or not st.button("Load", type="primary"):
+        if not files or not st.button("Load", type="primary", key="load-button"):
             return
 
         DATA_DIR.mkdir(exist_ok=True)
@@ -87,7 +87,7 @@ def categorize_step() -> None:
                      "line in the .env file. Everything else works without it.")
             return
 
-        if not st.button("Categorize with AI", type="primary"):
+        if not st.button("Categorize with AI", type="primary", key="categorize-button"):
             return
 
         try:
