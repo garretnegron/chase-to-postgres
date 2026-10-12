@@ -1,0 +1,122 @@
+# Install and test the whole app on fresh machines, the way a new user would.
+#
+# GitHub runs this on its own computers whenever you push to main (or open a
+# pull request, or press "Run workflow" on the Actions tab). Each run gets a
+# brand-new Mac and a brand-new Linux machine, follows the README's install
+# steps, and reports a green check or a red X next to the commit.
+
+name: Install and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:  # the "Run workflow" button on the Actions tab
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false  # if the Mac fails, still finish Linux (and vice versa)
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # ---- PostgreSQL ------------------------------------------------------
+      # Mac: Homebrew's Postgres behaves like Postgres.app: your Mac user name
+      # is the database user and there's no password.
+      - name: Start PostgreSQL (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          brew install postgresql@17
+          PG="$(brew --prefix postgresql@17)"
+          echo "$PG/bin" >> "$GITHUB_PATH"
+          DATA="$(brew --prefix)/var/postgresql@17"
+          [ -f "$DATA/PG_VERSION" ] || "$PG/bin/initdb" -D "$DATA" --username="$USER" --auth=trust
+          "$PG/bin/pg_ctl" -D "$DATA" -l "$RUNNER_TEMP/postgres.log" -w start
+          "$PG/bin/createdb" finances
+          "$PG/bin/createdb" finances_test
+          echo "DATABASE_URL=postgresql://localhost:5432/finances" >> "$GITHUB_ENV"
+          echo "CHASE_TEST_DATABASE_URL=postgresql://localhost:5432/finances_test" >> "$GITHUB_ENV"
+
+      # Linux: the machine comes with PostgreSQL installed but stopped.
+      - name: Start PostgreSQL (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+          sudo -u postgres createdb finances
+          sudo -u postgres createdb finances_test
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/finances" >> "$GITHUB_ENV"
+          echo "CHASE_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/finances_test" >> "$GITHUB_ENV"
+
+      # ---- the README's install steps ---------------------------------------
+      - name: Install the app
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/pip install -e ".[dev,dashboard]"
+
+      - name: Run the tests (including the whole dashboard, on finances_test)
+        run: .venv/bin/pytest -v
+
+      # ---- what a new user does on day one ----------------------------------
+      - name: Create the tables and load the categories and rules
+        run: |
+          .venv/bin/chase-import init
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f seed_categories.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f seed_rules.sql
+
+      - name: Load the sample Chase files
+        run: |
+          .venv/bin/chase-import load \
+            tests/sample_data/Chase1234_Activity_20261004.CSV \
+            tests/sample_data/Chase1234_Activity_20261009.CSV \
+            tests/sample_data/Chase5678_Activity20260901_20260930_20261009.CSV
+          .venv/bin/chase-import summary
+
+      - name: Health check
+        run: .venv/bin/chase-import doctor
+
+      - name: Back up the database
+        run: |
+          .venv/bin/chase-import backup
+          ls -l backups
+
+      - name: Make the desktop launcher (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          .venv/bin/chase-import shortcut
+          LAUNCHER="$HOME/Desktop/Spending Dashboard.command"
+          cat "$LAUNCHER"
+          test -x "$LAUNCHER"  # it must be marked "may run", or a double-click does nothing
+
+      - name: Start the dashboard the way the launcher does
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            nohup bash "$HOME/Desktop/Spending Dashboard.command" > dashboard.log 2>&1 &
+          else
+            nohup .venv/bin/chase-import dashboard > dashboard.log 2>&1 &
+          fi
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8501/_stcore/health && break
+            sleep 1
+          done
+          curl -fsS http://localhost:8501/_stcore/health || { cat dashboard.log; exit 1; }
+          echo
+          # A second double-click must not start a second copy
+          .venv/bin/chase-import dashboard | tee second.log
+          grep -q "already running" second.log
+
+      - name: Show the dashboard's log if anything failed
+        if: failure()
+        run: cat dashboard.log || true

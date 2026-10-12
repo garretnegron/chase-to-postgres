@@ -3,12 +3,13 @@
 import pandas as pd
 import streamlit as st
 
-from chase_import.dashboard.apikey import ENV_FILE, api_key_ready, api_key_steps
+from chase_import.env import ENV_FILE, IS_MAC, PROJECT_DIR
+from chase_import.dashboard.apikey import api_key_form, api_key_ready
 from chase_import.dashboard.load import upload_and_load
 from chase_import.dashboard.settings import file_card
 from chase_import.dashboard.theme import signature
 
-STARTER_LISTS = ENV_FILE.parent / "starter_lists"
+STARTER_LISTS = PROJECT_DIR / "starter_lists"
 
 
 def needs_welcome(df: pd.DataFrame, cats: pd.DataFrame) -> bool:
@@ -77,8 +78,7 @@ def welcome_page(df: pd.DataFrame, cats: pd.DataFrame) -> None:
         with st.container(key="card-welcome-key"):
             st.write("Only needed for **Categorize with AI**, which sorts new merchants "
                      "for you. Everything else works without it.")
-            api_key_steps()
-            st.button("Check again", key="welcome-check-key")  # any click reruns the page
+            api_key_form("welcome-key")
 
     # ---- 3. data
     step_title(3, "Your Chase downloads", has_data)
@@ -102,23 +102,34 @@ def welcome_page(df: pd.DataFrame, cats: pd.DataFrame) -> None:
     signature()
 
 
-def database_problem(error: Exception) -> None:
-    """Shown instead of everything else when Postgres can't be reached."""
-    st.title("😕 Can't reach your database")
-    with st.container(key="card-db-problem"):
-        st.markdown(
-            f"""
-The dashboard couldn't connect to PostgreSQL. The usual fixes:
-
+WINDOWS_DB_FIXES = f"""
 1. **Is PostgreSQL running?** Press the Windows key, type **Services**, open it, find
    **postgresql-x64-…**, and make sure its status is **Running** (right-click → **Start**).
 2. **Is the password right?** Open `{ENV_FILE}` in Notepad. The `DATABASE_URL=` line
    has the Postgres password in it, between `postgres:` and `@localhost`.
 3. **Does the database exist?** It's called `finances` in the setup steps.
-
-Then refresh this page.
 """
-        )
+
+MAC_DB_FIXES = f"""
+1. **Is PostgreSQL running?** With Postgres.app, look for the elephant 🐘 in the menu bar
+   at the top of the screen and click it. If it offers **Start**, click it. No elephant?
+   Open **Postgres.app** from your Applications folder.
+2. **Are the connection details right?** They're on the `DATABASE_URL=` line in
+   `{ENV_FILE}`. With Postgres.app it's usually just
+   `postgresql://localhost:5432/finances` (no password). The file is hidden in Finder:
+   press **Cmd + Shift + .** to show it, then open it with TextEdit.
+3. **Does the database exist?** It's called `finances` in the setup steps.
+"""
+
+
+def database_problem(error: Exception) -> None:
+    """Shown instead of everything else when Postgres can't be reached."""
+    st.title("😕 Can't reach your database")
+    with st.container(key="card-db-problem"):
+        st.markdown("The dashboard couldn't connect to PostgreSQL. The usual fixes:")
+        st.markdown(MAC_DB_FIXES if IS_MAC else WINDOWS_DB_FIXES)
+        st.markdown("Then refresh this page. For a full check of the setup, run "
+                    "`chase-import doctor` in the project folder.")
         with st.expander("Technical details"):
             st.code(str(error), language=None)
     signature()
