@@ -3,6 +3,8 @@
 Turn your Chase bank and credit card downloads into a clean, categorized Postgres
 database you own and can query however you like.
 
+![The spending dashboard: headline totals and spending by month, stacked by category](assets/dashboard.png)
+
 ```
 > chase-import load data
 LOAD  Chase6911_Activity_20261009.csv: 1406 new, 0 already in the database (checking ...6911), 5 pending skipped
