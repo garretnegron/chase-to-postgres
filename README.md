@@ -67,6 +67,20 @@ reload data at any time without losing anything.
 
 ## One-time setup
 
+**The quick way (Windows):** install Python and PostgreSQL (steps 1 and 2 below
+describe the installers), get the code, then in PowerShell, in the project folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1
+```
+
+It asks for the postgres password once, then creates the database, installs the
+app, writes `.env`, creates the tables, puts the icon on the desktop and runs
+`chase-import doctor`. Safe to run again. **On a Mac,** see
+[Setup on a Mac](#setup-on-a-mac).
+
+The steps below are what the script does, one at a time.
+
 ### 1. Install Postgres and create the database
 
 Install from <https://www.postgresql.org/download/windows/> (the EDB installer) and
@@ -157,40 +171,44 @@ Run it any time something seems off.
 
 ## Setup on a Mac
 
-The same app; the installers and a few commands differ. In **Terminal**
-(Applications → Utilities):
-
 1. **Install Python** from <https://www.python.org/downloads/macos/>. The Mac
    doesn't come with a usable one.
 2. **Install Postgres.app** from <https://postgresapp.com>: drag it into
    Applications, open it, and click **Initialize**. An elephant 🐘 appears in the
-   menu bar while it's running. On its first-run screen, follow its one-line
-   instructions to add its tools to your PATH (so `psql` works in Terminal).
-3. **Create the database:** `createdb finances`
-4. **Get the code and install it.** The first `git` asks to install Apple's
-   command line tools: click **Install**, wait, then run it again.
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/chase-to-postgres.git
-   cd chase-to-postgres
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -e ".[dashboard]"
-   ```
-5. **Settings:** `cp .env.example .env`, then `open -e .env` to edit it in
-   TextEdit. With Postgres.app there's no password, so the database line is just:
-   ```
-   DATABASE_URL=postgresql://localhost:5432/finances
-   ```
-   Delete the `ANTHROPIC_API_KEY` line, or leave it: the dashboard's welcome page
-   has a box to paste the key into.
-6. **Desktop launcher:** `chase-import shortcut` puts **Spending Dashboard.command**
-   on the Desktop. Double-click it to open the dashboard; a Terminal window opens
-   with it, and closing that window stops the dashboard. Drag it to the Dock if
-   you like.
-7. **Check everything:** `chase-import doctor`
+   menu bar while it's running.
+3. **Get the code.** Either download it (the green **Code** button on GitHub →
+   **Download ZIP**, then double-click the ZIP to unzip it), or, to be able to
+   update with `git pull` later, clone it in Terminal:
+   `git clone https://github.com/garretnegron/chase-to-postgres.git`
+   (the first `git` asks to install Apple's command line tools: click **Install**).
+4. **Run the setup script.** Open **Terminal** (Applications → Utilities), type
+   `bash ` (with a space), drag **setup_mac.sh** from the project folder into the
+   Terminal window, and press Return. It:
+   - checks for Python and Postgres, with a clear message if one is missing
+   - creates the `finances` database
+   - installs the app into `.venv`
+   - writes the settings file, `.env`
+   - creates the tables
+   - puts **Spending Dashboard** on the Desktop
+   - finishes with `chase-import doctor`
+5. **Double-click Spending Dashboard** on the Desktop. A Terminal window opens
+   along with the dashboard; closing that window stops it. The welcome page walks
+   you through the rest, including pasting your Claude API key.
+
+> **"Terminal would like to connect" / "Python would like to connect":** recent
+> versions of Postgres.app ask once for each program that connects. Click **OK**
+> both times.
+
+The script is safe to run again any time: each step skips what's already done.
+If you move the project folder, run it again to point the desktop launcher at
+the new place.
 
 `.env` starts with a dot, so Finder hides it. Press **Cmd + Shift + .** in Finder
 to show hidden files.
+
+**If you downloaded the ZIP:** to update later, download the new ZIP and copy
+your `.env`, `backups/` and `data/` folders into the new folder before deleting
+the old one: they're the only things that are yours.
 
 ---
 
@@ -494,6 +512,8 @@ chase-to-postgres/
 │   └── schema.sql       # tables, function and views (run by init and load)
 ├── starter_lists/       # category lists to upload in Settings (.csv)
 ├── Spending Dashboard.bat  # double-click to open the dashboard (the desktop icon runs it)
+├── setup_mac.sh         # one-command setup on a Mac
+├── setup_windows.ps1    # one-command setup on Windows
 ├── assets/              # the desktop icon and the README screenshot
 ├── seed_categories.sql  # your category list
 ├── seed_rules.sql       # your rules

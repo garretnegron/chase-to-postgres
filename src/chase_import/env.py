@@ -116,12 +116,40 @@ def redact(url: str) -> str:
 # ---------------------------------------------------------------- the desktop
 
 
+def _windows_desktop() -> Path | None:
+    """Ask Windows where the Desktop is: the same call PowerShell's GetFolderPath uses.
+
+    The Desktop isn't always C:\\Users\\<you>\\Desktop: OneDrive often moves it.
+    """
+    import ctypes
+    import uuid
+
+    class GUID(ctypes.Structure):
+        _fields_ = [("data", ctypes.c_ubyte * 16)]
+
+    desktop_id = GUID.from_buffer_copy(uuid.UUID("{B4BFCC3A-DB2C-424C-B029-7FE99A87C641}").bytes_le)
+    path = ctypes.c_wchar_p()
+    try:
+        if ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(desktop_id), 0, None, ctypes.byref(path)) != 0:
+            return None
+        return Path(path.value)
+    finally:
+        ctypes.windll.ole32.CoTaskMemFree(path)
+
+
 def desktop_dir() -> Path:
-    """The real desktop folder (OneDrive can move it on Windows)."""
+    """The real desktop folder."""
     if IS_WINDOWS:
-        onedrive = Path(os.environ.get("OneDrive", "")) / "Desktop"
-        if os.environ.get("OneDrive") and onedrive.is_dir():
-            return onedrive
+        try:
+            found = _windows_desktop()
+            if found:
+                return found
+        except (OSError, AttributeError):
+            pass
+        # Fallback: the usual OneDrive spots, then the plain one
+        for var in ("OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+            if os.environ.get(var) and (Path(os.environ[var]) / "Desktop").is_dir():
+                return Path(os.environ[var]) / "Desktop"
     return Path.home() / "Desktop"
 
 

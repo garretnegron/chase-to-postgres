@@ -43,8 +43,7 @@ jobs:
           DATA="$(brew --prefix)/var/postgresql@17"
           [ -f "$DATA/PG_VERSION" ] || "$PG/bin/initdb" -D "$DATA" --username="$USER" --auth=trust
           "$PG/bin/pg_ctl" -D "$DATA" -l "$RUNNER_TEMP/postgres.log" -w start
-          "$PG/bin/createdb" finances
-          "$PG/bin/createdb" finances_test
+          "$PG/bin/createdb" finances_test  # setup_mac.sh creates "finances" itself
           echo "DATABASE_URL=postgresql://localhost:5432/finances" >> "$GITHUB_ENV"
           echo "CHASE_TEST_DATABASE_URL=postgresql://localhost:5432/finances_test" >> "$GITHUB_ENV"
 
@@ -60,11 +59,22 @@ jobs:
           echo "CHASE_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/finances_test" >> "$GITHUB_ENV"
 
       # ---- the README's install steps ---------------------------------------
-      - name: Install the app
+      # Mac: the one-command setup script, exactly as a new user runs it. It
+      # creates the database, installs the app, writes .env, creates the tables,
+      # makes the desktop launcher and runs doctor.
+      - name: Install the app with setup_mac.sh (Mac)
+        if: runner.os == 'macOS'
+        run: bash setup_mac.sh
+
+      - name: Install the app (Linux)
+        if: runner.os == 'Linux'
         run: |
           python -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/pip install -e ".[dev,dashboard]"
+          .venv/bin/pip install -e ".[dashboard]"
+
+      - name: Install the test tools
+        run: .venv/bin/pip install -e ".[dev,dashboard]"
 
       - name: Run the tests (including the whole dashboard, on finances_test)
         run: .venv/bin/pytest -v
@@ -92,10 +102,9 @@ jobs:
           .venv/bin/chase-import backup
           ls -l backups
 
-      - name: Make the desktop launcher (Mac)
+      - name: Check the desktop launcher setup_mac.sh made (Mac)
         if: runner.os == 'macOS'
         run: |
-          .venv/bin/chase-import shortcut
           LAUNCHER="$HOME/Desktop/Spending Dashboard.command"
           cat "$LAUNCHER"
           test -x "$LAUNCHER"  # it must be marked "may run", or a double-click does nothing
