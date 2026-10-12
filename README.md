@@ -58,7 +58,7 @@ reload data at any time without losing anything.
 
 ## Requirements
 
-- **Windows** (instructions below; Mac/Linux work too with the usual command differences)
+- **Windows or Mac.** Windows steps are first; Mac users, see [Setup on a Mac](#setup-on-a-mac)
 - **Python 3.10+**
 - **PostgreSQL 15 or newer.** The rules table uses a feature added in 15
 - **An Anthropic API key**, only for `categorize`. Everything else works without one
@@ -132,7 +132,7 @@ lists**, so change them to fit your own spending before you run them.
 (Or skip this step and upload a category list from the dashboard's welcome
 page instead: see `starter_lists/`.)
 
-### 6. Put an icon on the desktop (Windows)
+### 6. Put an icon on the desktop
 
 ```powershell
 chase-import shortcut
@@ -142,6 +142,55 @@ This adds a **Spending Dashboard** icon to the desktop. Double-click it to open
 the dashboard: no terminal, no typing. A small black window opens minimized in
 the taskbar; that window *is* the dashboard, so closing it stops it.
 Double-clicking again while it's running just brings the dashboard back up.
+
+### 7. Check everything
+
+```powershell
+chase-import doctor
+```
+
+Checks Python, the packages, `.env`, the database connection, the API key, the
+backup tool and the desktop icon, and says how to fix anything marked `[FAIL]`.
+Run it any time something seems off.
+
+---
+
+## Setup on a Mac
+
+The same app; the installers and a few commands differ. In **Terminal**
+(Applications → Utilities):
+
+1. **Install Python** from <https://www.python.org/downloads/macos/>. The Mac
+   doesn't come with a usable one.
+2. **Install Postgres.app** from <https://postgresapp.com>: drag it into
+   Applications, open it, and click **Initialize**. An elephant 🐘 appears in the
+   menu bar while it's running. On its first-run screen, follow its one-line
+   instructions to add its tools to your PATH (so `psql` works in Terminal).
+3. **Create the database:** `createdb finances`
+4. **Get the code and install it.** The first `git` asks to install Apple's
+   command line tools: click **Install**, wait, then run it again.
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/chase-to-postgres.git
+   cd chase-to-postgres
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -e ".[dashboard]"
+   ```
+5. **Settings:** `cp .env.example .env`, then `open -e .env` to edit it in
+   TextEdit. With Postgres.app there's no password, so the database line is just:
+   ```
+   DATABASE_URL=postgresql://localhost:5432/finances
+   ```
+   Delete the `ANTHROPIC_API_KEY` line, or leave it: the dashboard's welcome page
+   has a box to paste the key into.
+6. **Desktop launcher:** `chase-import shortcut` puts **Spending Dashboard.command**
+   on the Desktop. Double-click it to open the dashboard; a Terminal window opens
+   with it, and closing that window stops the dashboard. Drag it to the Dock if
+   you like.
+7. **Check everything:** `chase-import doctor`
+
+`.env` starts with a dot, so Finder hides it. Press **Cmd + Shift + .** in Finder
+to show hidden files.
 
 ---
 
@@ -176,7 +225,9 @@ That's it. Old files can stay in `data`; re-loading them adds nothing.
 | `chase-import categorize --dry-run --limit 20` | Preview Claude's answers for the 20 biggest uncategorized merchants. Saves nothing |
 | `chase-import categorize` | Ask Claude about every uncategorized merchant and save the answers |
 | `chase-import dashboard` | Open the dashboard in your browser (Ctrl+C in the terminal to stop it) |
-| `chase-import shortcut` | Put a **Spending Dashboard** icon on the Windows desktop |
+| `chase-import shortcut` | Put a **Spending Dashboard** launcher on the desktop (Windows or Mac) |
+| `chase-import backup` | Save a backup of the database into `backups/` |
+| `chase-import doctor` | Check the whole setup and say how to fix problems |
 
 ---
 
@@ -364,20 +415,27 @@ GROUP BY subcategory;
 
 ## Backups
 
-Your rules and categories are in git, but **overrides and Claude's answers live
-only in the database**. Back it up now and then (adjust `18` to your Postgres
-version; it'll ask for your Postgres password):
+Your categories, manual fixes and Claude's answers live **only in the database**.
+Back it up now and then, and before big changes: press **Back up now** on the
+dashboard's **Settings** tab, or run
 
 ```powershell
-mkdir backups -Force
-& "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" -U postgres -d finances -F c -f backups\finances.dump
+chase-import backup
 ```
 
-Restore into an existing database with:
+Either way you get a file like `backups/finances-2026-10-12-143000.dump`. It finds
+Postgres's `pg_dump` by itself (Windows, Postgres.app or Homebrew). Copy the
+`backups` folder somewhere else once in a while (a USB stick, a cloud drive): a
+backup on the same laptop won't survive the laptop.
+
+Restore into an existing database with (adjust `18` to your Postgres version and
+the file name to your backup):
 
 ```powershell
-& "C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" -U postgres -d finances --clean backups\finances.dump
+& "C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" -U postgres -d finances --clean backups\finances-2026-10-12-143000.dump
 ```
+
+On a Mac with Postgres.app: `pg_restore -d finances --clean backups/finances-2026-10-12-143000.dump`
 
 `backups/` is git-ignored. It contains your financial data, so keep it private.
 
@@ -410,6 +468,7 @@ description afterwards, which would look like a new transaction.
 | `activate` is blocked in PowerShell | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | `The dashboard needs Streamlit` | `pip install -e ".[dashboard]"` |
 | Dashboard: `No module named chase_import.dashboard` | Re-run `pip install -e ".[dashboard]"` |
+| Anything else | Run `chase-import doctor` and fix what it marks `[FAIL]` |
 
 ---
 
@@ -423,19 +482,23 @@ chase-to-postgres/
 │   ├── db.py            # loads into Postgres without duplicates
 │   ├── categorize.py    # asks Claude about leftover merchants
 │   ├── category_list.py # reads and checks category spreadsheets
+│   ├── env.py           # where things live; API key, pg_dump finder
+│   ├── backup.py        # backups with pg_dump
 │   ├── dashboard/       # the Streamlit dashboard
 │   │   ├── app.py       #   what Streamlit runs: page setup, filters, tabs
 │   │   ├── data.py      #   reads from and writes to Postgres
 │   │   ├── theme.py     #   colors and card styling
 │   │   ├── cards.py     #   cards shared by several tabs
+│   │   ├── welcome.py, apikey.py, notify.py  #   first-run page, key box, pop-ups
 │   │   └── load.py, overview.py, categories.py, review.py, settings.py  # one file per tab
 │   └── schema.sql       # tables, function and views (run by init and load)
 ├── starter_lists/       # category lists to upload in Settings (.csv)
 ├── Spending Dashboard.bat  # double-click to open the dashboard (the desktop icon runs it)
-├── assets/              # the desktop icon
+├── assets/              # the desktop icon and the README screenshot
 ├── seed_categories.sql  # your category list
 ├── seed_rules.sql       # your rules
-├── tests/               # parser tests with made-up sample files
+├── tests/               # tests, with made-up sample files
+├── .github/workflows/   # the install-and-test run on GitHub's Mac and Linux machines
 ├── data/                # your Chase downloads (git-ignored)
 └── .env                 # your password and API key (git-ignored)
 ```
@@ -443,9 +506,18 @@ chase-to-postgres/
 ## Development
 
 ```powershell
-pip install -e ".[dev]"
+pip install -e ".[dev,dashboard]"
 pytest
 ```
 
 The files in `tests/sample_data` are made up. Real exports belong in `data/`,
 which is never committed.
+
+**Tested on a fresh Mac and Linux machine:** `.github/workflows/test.yml` tells
+GitHub to install everything from scratch (Postgres, Python, the app), run the
+tests (including the whole dashboard against a scratch database), load the sample
+files, run `doctor`, make a backup, and start the dashboard the way the desktop
+launcher does. It runs on every push to `main` and every pull request; the result
+is the ✅ or ❌ next to each commit, and the details are on the **Actions** tab.
+`test_dashboard_smoke.py` only runs when `CHASE_TEST_DATABASE_URL` is set, so it
+never touches your real database.

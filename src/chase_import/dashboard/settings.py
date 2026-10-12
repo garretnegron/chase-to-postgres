@@ -1,8 +1,14 @@
-"""The Settings tab: add, edit and remove categories."""
+"""The Settings tab: add, edit and remove categories, and make backups."""
+
+import os
+from datetime import datetime
 
 import pandas as pd
 import psycopg
 import streamlit as st
+
+from chase_import.backup import BackupError, list_backups, make_backup
+from chase_import.env import BACKUP_DIR
 
 from chase_import.category_list import (
     CategoryFileError, plan_changes, read_file, template, to_excel_bytes, to_sheet,
@@ -248,13 +254,54 @@ def remove_card(cats: pd.DataFrame) -> None:
         done(f"Removed '{target}'. Everything it had now goes to '{replacement}'.")
 
 
+# ---------------------------------------------------------------- backups
+
+
+def when(path) -> str:
+    """A file's time as e.g. "Oct 12, 2026 at 02:30 PM"."""
+    t = datetime.fromtimestamp(path.stat().st_mtime)
+    return f"{t:%b} {t.day}, {t:%Y} at {t:%I:%M %p}"
+
+
+def backup_card() -> None:
+    """Save a copy of the whole database, and show the recent ones."""
+    with st.container(key="card-settings-backup"):
+        st.subheader("Backups")
+        st.caption("Your categories, fixes and Claude's answers live only in the database. "
+                   "A backup saves all of it, transactions included, in one file. Make one "
+                   "now and then, and before big changes like removing a category. Copy the "
+                   "folder below to a USB stick or cloud drive once in a while too: a backup "
+                   "on the same laptop won't survive the laptop.")
+
+        backups = list_backups()
+        if backups:
+            st.write(f"Last backup: **{when(backups[0])}**")
+            with st.expander(f"All backups ({len(backups)})"):
+                for path in backups[:20]:
+                    st.write(f"{path.name} · {when(path)} · {path.stat().st_size / 1024:,.0f} KB")
+        else:
+            st.info("No backups yet.")
+        st.code(str(BACKUP_DIR), language=None)
+
+        if not st.button("Back up now", type="primary", key="backup-button"):
+            return
+        try:
+            with st.spinner("Backing up..."):
+                path = make_backup(os.environ["DATABASE_URL"])
+        except BackupError as e:
+            st.error(f"The backup didn't work: {e}")
+            return
+        done(f"Backup saved: {path.name}")
+
+
 # ---------------------------------------------------------------- the tab
 
 
 def settings_tab() -> None:
-    """Edit, add and remove categories."""
+    """Edit, add and remove categories; back up the database."""
     cats = load_category_table()
     edit_card(cats)
     file_card(cats)
     add_card(cats)
     remove_card(cats)
+    backup_card()

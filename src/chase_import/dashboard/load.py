@@ -8,7 +8,7 @@ import streamlit as st
 
 from chase_import import categorize, db
 from chase_import import parser as p
-from chase_import.dashboard.apikey import api_key_ready, api_key_steps
+from chase_import.dashboard.apikey import api_key_form, api_key_ready
 from chase_import.dashboard.data import load_transactions
 from chase_import.dashboard.notify import keep_results, rerun_with, show_results
 
@@ -94,8 +94,8 @@ def categorize_step() -> None:
                    "numbers. It costs a few cents.")
         if not api_key_ready():
             st.warning("Categorizing needs a Claude API key. Everything else works without it.")
-            with st.expander("How to set one up"):
-                api_key_steps()
+            with st.expander("Set one up"):
+                api_key_form("import-key")
             return
 
         if not st.button("Categorize with AI", type="primary", key="categorize-button"):
